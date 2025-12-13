@@ -1,10 +1,13 @@
 package com.jarvismini.automation
 
-import com.jarvismini.engine.LLMManager
-
+/**
+ * STUB implementation.
+ * Engine / LLM will be wired later.
+ */
 object SmartAutoReply {
 
     suspend fun generate(message: String): String {
-        return LLMManager.generateReply(message)
+        // TODO: connect to engine later
+        return ""
     }
 }
