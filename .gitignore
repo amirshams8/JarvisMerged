@@ -1,5 +1,17 @@
-/build/
-/.gradle/
-/local.properties
+# Gradle
+.gradle/
+build/
+
+# Android
+**/build/
+local.properties
+
+# IntelliJ / Android Studio
+.idea/
 *.iml
-/.idea/
+
+# Kotlin
+*.class
+
+# OS
+.DS_Store

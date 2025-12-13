@@ -1,1 +1,0 @@
-com.jarvismini.core

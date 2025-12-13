@@ -1,3 +1,0 @@
-com.jarvismini.ui
-layout activity_main
-style Theme_JarvisMini
