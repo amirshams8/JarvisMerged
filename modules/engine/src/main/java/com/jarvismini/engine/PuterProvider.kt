@@ -3,10 +3,17 @@ package com.jarvismini.engine
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-class PuterProvider : LLMProvider {
+class PuterProvider(
+    private val apiKey: String? = null
+) : LLMProvider {
 
     override suspend fun generateReply(prompt: String): String =
         withContext(Dispatchers.IO) {
-            "PuterProvider response for: $prompt"
+            // Placeholder for future Puter API integration
+            if (apiKey.isNullOrEmpty()) {
+                "PuterProvider not configured"
+            } else {
+                "PuterProvider response for: \"$prompt\""
+            }
         }
 }
