@@ -1,0 +1,4 @@
+/workspaces/JarvisMerged/modules/ui/src/main/java/com/jarvismini/ui/settings/SettingsActivity.kt
+/workspaces/JarvisMerged/modules/ui/src/main/java/com/jarvismini/ui/DebugPanel.kt
+/workspaces/JarvisMerged/modules/ui/src/main/java/com/jarvismini/ui/SettingsActivity.kt
+/workspaces/JarvisMerged/modules/ui/src/main/java/com/jarvismini/ui/ViewBindings.kt
