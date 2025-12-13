@@ -1,18 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest
-    xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.jarvismini">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <application
-        android:name=".core.CoreApp"
-        android:allowBackup="true"
         android:label="Jarvis Merged"
         android:icon="@mipmap/ic_launcher"
-        android:roundIcon="@mipmap/ic_launcher_round"
-        android:supportsRtl="true"
         android:theme="@style/Theme.Jarvis">
 
-        <!-- Main Activity -->
         <activity
             android:name="com.jarvismini.ui.MainActivity"
             android:exported="true">
@@ -22,18 +15,9 @@
             </intent-filter>
         </activity>
 
-        <!-- Settings Activity -->
-        <activity
-            android:name="com.jarvismini.ui.settings.SettingsActivity"
-            android:exported="false" />
+    </application>
 
-        <!-- Accessibility Service -->
-        <service
-            android:name="com.jarvismini.AppAccessibilityService"
-            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
-            android:exported="false">
-            <intent-filter>
-                <action android:name="android.accessibilityservice.AccessibilityService" />
+</manifest>
             </intent-filter>
 
             <meta-data
