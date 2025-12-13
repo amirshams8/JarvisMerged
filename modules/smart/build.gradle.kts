@@ -9,19 +9,18 @@ android {
 
     defaultConfig {
         minSdk = 23
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+
     kotlinOptions {
         jvmTarget = "17"
     }
 }
 
 dependencies {
-    // keep dependencies minimal to avoid pulling heavy libs
     testImplementation("junit:junit:4.13.2")
 }
