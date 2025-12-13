@@ -1,0 +1,7 @@
+/workspaces/JarvisMerged/modules/automation/src/main/java/com/jarvismini/automation/ChatOpener.kt
+/workspaces/JarvisMerged/modules/automation/src/main/java/com/jarvismini/automation/MessageExtractor.kt
+/workspaces/JarvisMerged/modules/automation/src/main/java/com/jarvismini/automation/NodeFinder.kt
+/workspaces/JarvisMerged/modules/automation/src/main/java/com/jarvismini/automation/AutoCloser.kt
+/workspaces/JarvisMerged/modules/automation/src/main/java/com/jarvismini/automation/AutomationStubs.kt
+/workspaces/JarvisMerged/modules/automation/src/main/java/com/jarvismini/automation/SmartAutoReply.kt
+/workspaces/JarvisMerged/modules/automation/src/main/java/com/jarvismini/automation/AutomationEngine.kt

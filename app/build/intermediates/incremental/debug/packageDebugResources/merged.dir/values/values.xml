@@ -8,7 +8,9 @@
     <color name="white">#FFFFFF</color>
     <string name="app_name">Jarvis Merged</string>
     <string name="service_desc">Jarvis automation service for WhatsApp reply.</string>
-    <style name="AppTheme" parent="Theme.Material3.DayNight.NoActionBar"/>
+    <style name="Theme" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="android:windowBackground">@android:color/black</item>
+    </style>
     <style name="Theme.JarvisMerged" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/black</item>

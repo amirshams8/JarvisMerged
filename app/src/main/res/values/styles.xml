@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <!-- Base application styles -->
-    <style name="AppTheme" parent="Theme.Material3.DayNight.NoActionBar" />
+    <!-- Base app theme -->
+    <style name="Theme" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="android:windowBackground">@android:color/black</item>
+    </style>
 
 </resources>
