@@ -4,8 +4,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 class PuterProvider : LLMProvider {
+
     override suspend fun generateReply(prompt: String): String =
         withContext(Dispatchers.IO) {
-            "Puter reply stub"
+            "PuterProvider response for: $prompt"
         }
 }
