@@ -1,24 +1,45 @@
 plugins {
-  id("com.android.application")
-  id("org.jetbrains.kotlin.android")
+    id("com.android.application")
+    id("org.jetbrains.kotlin.android")
 }
+
 android {
-  namespace = "com.jarvismini"
-  compileSdk = 34
-  defaultConfig {
-    applicationId = "com.jarvismini"
-    minSdk = 26
-    targetSdk = 34
-    versionCode = 1
-    versionName = "1.0"
-  }
-  compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
-  kotlinOptions { jvmTarget = "17" }
+    namespace = "com.jarvismini"
+    compileSdk = 34
+
+    defaultConfig {
+        applicationId = "com.jarvismini"
+        minSdk = 26
+        targetSdk = 34
+        versionCode = 1
+        versionName = "1.0"
+    }
+
+    buildFeatures {
+        viewBinding = true
+    }
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = "17"
+    }
 }
+
 dependencies {
-  implementation(project(":modules:core"))
-  implementation(project(":modules:automation"))
-  implementation(project(":modules:engine"))
-  implementation(project(":modules:smart"))
-  implementation(project(":modules:ui"))
+    // ✅ REQUIRED Android UI libs
+    implementation("androidx.core:core-ktx:1.12.0")
+    implementation("androidx.appcompat:appcompat:1.6.1")
+    implementation("com.google.android.material:material:1.11.0")
+
+    // ✅ Project modules
+    implementation(project(":modules:core"))
+    implementation(project(":modules:automation"))
+    implementation(project(":modules:engine"))
+    implementation(project(":modules:smart"))
+
+    // ❌ DO NOT add :modules:ui yet
 }
