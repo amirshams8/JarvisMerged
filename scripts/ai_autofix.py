@@ -4,6 +4,7 @@ import subprocess
 import time
 import json
 import requests
+import sys
 
 # ================= CONFIG =================
 MAX_RETRIES = 3
@@ -11,10 +12,15 @@ PATCH_BRANCH = "ai-autofix"
 BUILD_CMD = "./gradlew build"
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
-GEMINI_URL = (
+GEMINI_URL="https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
     "https://generativelanguage.googleapis.com/v1beta/models/"
     "gemini-1.5-pro:generateContent"
 )
+if not GEMINI_API_KEY:
+    print("❌ Error: GEMINI_API_KEY environment variable is not set.")
+    sys.exit(1)
+
+GEMINI_URL="https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
 
 # ================ HELPERS =================
 def run(cmd):
@@ -48,12 +54,34 @@ def ask_gemini(prompt):
         ]
     }
     r = requests.post(
-        f"{GEMINI_URL}?key={GEMINI_API_KEY}",
+GEMINI_URL="https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
         headers={"Content-Type": "application/json"},
         data=json.dumps(payload),
         timeout=60
     )
     r.raise_for_status()
+    return r.json()["candidates"][0]["content"]["parts"][0]["text"]
+
+def apply_patch(patch):
+    p = subprocess.run(["git", "apply"], input=patch, text=True)
+    return p.returncode == 0
+
+        "model": "gemini-3-pro",
+        "prompt": prompt,
+        "temperature": 0.7
+    }
+
+    headers = {"Content-Type": "application/json"}
+
+    r = requests.post(
+GEMINI_URL="https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
+        headers=headers,
+        data=json.dumps(payload),
+        timeout=60
+    )
+    r.raise_for_status()
+
+    # Extract AI response
     return r.json()["candidates"][0]["content"]["parts"][0]["text"]
 
 def apply_patch(patch):
@@ -104,6 +132,21 @@ Rules:
         print("❌ Gemini could not produce a valid fix.")
         exit(1)
 
+
+    print("📡 Calling Gemini-3-Pro...")
+    try:
+        patch = ask_gemini(prompt)
+    except requests.exceptions.HTTPError as e:
+        print(f"❌ HTTP Error: {e}")
+        sys.exit(1)
+    except Exception as e:
+        print(f"❌ Unexpected error: {e}")
+        sys.exit(1)
+
+    if "NO_FIX_POSSIBLE" in patch or not patch.strip().startswith("diff"):
+        print("❌ Gemini could not produce a valid fix.")
+        exit(1)
+
     if not apply_patch(patch):
         print("❌ Patch failed to apply.")
         run("git reset --hard")
@@ -134,6 +177,13 @@ Rules:
 
     confidence = min(confidence, 100)
 
+    confidence += 70  # build passed
+    if "ERROR" not in logs and "Exception" not in logs:
+        confidence += 10
+    warnings = logs.count("WARNING")
+    if warnings < 10:
+        confidence += 20
+    confidence = min(confidence, 100)
     print(f"✅ Confidence score: {confidence}/100")
 
     # ============ CREATE PR ============
