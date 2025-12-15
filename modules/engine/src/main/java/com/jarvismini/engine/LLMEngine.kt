@@ -1,5 +1,10 @@
 package com.jarvismini.engine
 
-interface LLMEngine {
-    suspend fun generateReply(input: String): EngineResult
+import android.content.Context
+
+object LLMEngine {
+
+    fun init(context: Context) {
+        // Choose real or stub engine internally
+    }
 }
