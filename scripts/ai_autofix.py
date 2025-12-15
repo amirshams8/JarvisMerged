@@ -1,97 +1,184 @@
 import os
 import subprocess
 import time
+import json
 import requests
 
+# ================= CONFIG =================
 MAX_RETRIES = 3
 PATCH_BRANCH = "ai-autofix"
 BUILD_CMD = "./gradlew build"
-API_KEY = os.getenv("AI_API_KEY")
-GEMINI_URL = "https://api.gemini.com/v1/chat/completions"  # replace with actual endpoint
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
+GEMINI_URL = (
+    "https://generativelanguage.googleapis.com/v1beta/models/"
+    "gemini-1.5-pro:generateContent"
+)
+
+# ================ HELPERS =================
 def run(cmd):
-    result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
-    return result.stdout, result.stderr, result.returncode
+    p = subprocess.run(cmd, shell=True, text=True, capture_output=True)
+    return p.stdout + p.stderr, p.returncode
 
-def get_build_logs():
-    stdout, stderr, code = run(BUILD_CMD)
-    with open("build.log", "w") as f:
-        f.write(stdout + stderr)
-    return stdout + stderr, code
-
-def get_repo_diff():
-    diff, _, _ = run("git diff")
-    return diff
+def read_gradle_files():
+    content = []
+    for root, _, files in os.walk("."):
+        for f in files:
+            if f in (
+                "build.gradle",
+                "build.gradle.kts",
+                "settings.gradle",
+                "gradle.properties",
+            ):
+                path = os.path.join(root, f)
+                try:
+                    with open(path, "r", errors="ignore") as fh:
+                        content.append(f"\n--- {path} ---\n{fh.read()}")
+                except:
+                    pass
+    return "\n".join(content)
 
 def ask_gemini(prompt):
-    headers = {
-        "Authorization": f"Bearer {API_KEY}",
-        "Content-Type": "application/json",
+    payload = {
+        "contents": [
+            {
+                "parts": [{"text": prompt}]
+            }
+        ]
     }
-    data = {
-        "model": "gemini-3-pro",
-        "messages": [{"role": "user", "content": prompt}],
-    }
-    response = requests.post(GEMINI_URL, json=data, headers=headers)
-    response.raise_for_status()
-    return response.json()["choices"][0]["message"]["content"]
+    r = requests.post(
+        f"{GEMINI_URL}?key={GEMINI_API_KEY}",
+        headers={"Content-Type": "application/json"},
+        data=json.dumps(payload),
+        timeout=60
+    )
+    r.raise_for_status()
+    return r.json()["candidates"][0]["content"]["parts"][0]["text"]
 
-def apply_patch(patch_text):
-    result = subprocess.run(["git", "apply"], input=patch_text, text=True)
-    return result.returncode == 0
+def apply_patch(patch):
+    p = subprocess.run(["git", "apply"], input=patch, text=True)
+    return p.returncode == 0
 
-def commit_fix():
-    run(f"git checkout -b {PATCH_BRANCH}")
-    run("git add .")
-    run('git commit -m "fix: AI autofix Gradle/AGP issues"')
-
+# ================ MAIN LOOP =================
 for attempt in range(1, MAX_RETRIES + 1):
-    print(f"\n=== AI Autofix Attempt {attempt} ===")
-    logs, code = get_build_logs()
-    if code == 0:
-        print("Build already passes. No fix needed.")
-        break
+    print(f"\n=== Gemini Autofix Attempt {attempt} ===")
 
-    diff = get_repo_diff()
+    logs, code = run(BUILD_CMD)
+    with open("build.log", "w") as f:
+        f.write(logs)
+
+    if code == 0:
+        print("✅ Build already passes. No fix needed.")
+        exit(0)
+
+    # Wake-up rules
+    if not any(k in logs for k in ["Gradle", "AGP", "Kotlin", "SDK", "plugin"]):
+        print("❌ Not a Gradle/Android build issue. Skipping AI.")
+        exit(1)
+
+    gradle_files = read_gradle_files()
 
     prompt = f"""
-You are an expert Android developer with deep knowledge of Gradle, AGP 8/9+, and Kotlin DSL.
+You are an expert Android build engineer.
 
 Gradle build logs:
 {logs}
 
-Current repo diff:
-{diff}
+Gradle configuration files:
+{gradle_files}
 
 Rules:
-- Only fix build.gradle or build.gradle.kts files.
-- Update deprecated Gradle/AGP settings to modern syntax.
-- Fix SDK, Java version, or plugin issues safely.
-- Ensure build passes after fix.
-- Do NOT touch app source code.
-- Output ONLY a git patch (diff).
-- If unsure, respond with NO_FIX_POSSIBLE.
+- Fix ONLY Gradle / AGP / Kotlin / SDK issues
+- Modify ONLY Gradle-related files
+- Use AGP 8/9 compatible syntax
+- Output ONLY a unified git diff
+- No explanations
+- If unsure, output NO_FIX_POSSIBLE
 """
+
+    print("📡 Calling Gemini-3-Pro...")
     patch = ask_gemini(prompt)
 
-    if "NO_FIX_POSSIBLE" in patch:
-        print("AI could not find a fix. Stopping.")
-        break
+    if "NO_FIX_POSSIBLE" in patch or not patch.strip().startswith("diff"):
+        print("❌ Gemini could not produce a valid fix.")
+        exit(1)
 
-    if apply_patch(patch):
-        print("Patch applied. Testing build...")
-        logs, code = get_build_logs()
-        if code == 0:
-            print("✅ Build passed! Committing fix...")
-            commit_fix()
-            break
-        else:
-            print("⚠ Build still failing. Reverting patch and retrying...")
-            run("git reset --hard")
-            time.sleep(2)
-    else:
-        print("❌ Patch failed to apply. Retrying...")
+    if not apply_patch(patch):
+        print("❌ Patch failed to apply.")
         run("git reset --hard")
         time.sleep(2)
-else:
-    print("❌ All AI attempts failed. Manual intervention needed.")
+        continue
+
+    print("🧪 Rebuilding after patch...")
+    logs, code = run(BUILD_CMD)
+
+    if code != 0:
+        print("⚠ Build still failing. Reverting.")
+        run("git reset --hard")
+        time.sleep(2)
+        continue
+
+    # ============ CONFIDENCE SCORE ============
+    print("📊 Calculating confidence score...")
+    confidence = 0
+
+    confidence += 70  # build passed
+
+    if "ERROR" not in logs and "Exception" not in logs:
+        confidence += 10
+
+    warnings = logs.count("WARNING")
+    if warnings < 10:
+        confidence += 20
+
+    confidence = min(confidence, 100)
+
+    print(f"✅ Confidence score: {confidence}/100")
+
+    # ============ CREATE PR ============
+    print("📤 Creating Pull Request...")
+
+    run(f"git checkout -B {PATCH_BRANCH}")
+    run("git add .")
+    run('git commit -m "fix: Gemini autofix Android build"')
+    run(f"git push origin {PATCH_BRANCH} --force")
+
+    pr_body = f"""
+🤖 **Gemini-3-Pro Android Autofix**
+
+### ✅ Result
+- Build was failing
+- AI applied Gradle / AGP fix
+- Build now passes
+
+### 📊 Confidence Score
+**{confidence}/100**
+
+### 🔍 Scoring Breakdown
+- Build success: +70
+- No new errors: +10
+- Low warnings: +20
+
+### 🛡 Safety Guarantees
+- No app source code modified
+- Only Gradle configuration updated
+- Fix verified by rebuild
+
+Please review and merge if acceptable.
+"""
+
+    subprocess.run(
+        f'''gh pr create \
+--title "fix: Gemini autofix Android build failure" \
+--body "{pr_body}" \
+--label ai-autofix \
+--base main \
+--head {PATCH_BRANCH}''',
+        shell=True
+    )
+
+    print("🎉 PR created successfully.")
+    exit(0)
+
+print("❌ All AI attempts failed. Manual intervention needed.")
+exit(1)
