@@ -30,16 +30,13 @@ android {
 }
 
 dependencies {
-    // ✅ REQUIRED Android UI libs
     implementation("androidx.core:core-ktx:1.12.0")
     implementation("androidx.appcompat:appcompat:1.6.1")
     implementation("com.google.android.material:material:1.11.0")
 
-    // ✅ Project modules
     implementation(project(":modules:core"))
     implementation(project(":modules:automation"))
     implementation(project(":modules:engine"))
     implementation(project(":modules:smart"))
-
-    // ❌ DO NOT add :modules:ui yet
+    implementation(project(":modules:ui"))
 }
