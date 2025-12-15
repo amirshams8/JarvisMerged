@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+set -e echo "🔹 Switching to main branch" git checkout main echo "🔹 Git status" git status 
+echo "🔹 Adding all changes" git add . echo "🔹 Committing" git commit -m "Fix build, lock 
+Java 17, resolve Kotlin compile issues" || echo "Nothing to commit" echo "🔹 Pushing 
