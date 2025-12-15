@@ -1,6 +1,7 @@
 package com.jarvismini.engine
 
 import android.content.Context
+import com.jarvismini.core.JarvisState
 
 object StubLLMEngine : LLMEngine {
 
@@ -8,7 +9,10 @@ object StubLLMEngine : LLMEngine {
         // no-op
     }
 
-    override fun generateReply(prompt: String): String {
-        return "LLM not available"
+    override fun generateReply(input: AutoReplyInput): String {
+        return ReplyToneResolver.resolve(
+            reason = input.reason,
+            mode = JarvisState.currentMode
+        )
     }
 }
