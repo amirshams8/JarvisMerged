@@ -1,0 +1,18 @@
+{
+  "name": "Android + Gemini-3-Pro Autofix",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu-22.04",
+  "features": {
+    "ghcr.io/devcontainers/features/java:1": {
+      "version": "17"
+    }
+  },
+  "postCreateCommand": "chmod +x ./gradlew && ./gradlew --version",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "vscjava.vscode-java-pack",
+        "android.android"
+      ]
+    }
+  }
+}
