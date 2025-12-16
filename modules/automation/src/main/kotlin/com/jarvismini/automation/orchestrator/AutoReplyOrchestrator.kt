@@ -11,9 +11,7 @@ object AutoReplyOrchestrator {
     fun decide(inputText: String): ReplyDecision {
         return when (JarvisState.currentMode) {
 
-            JarvisMode.SLEEP ->
-                NoReply
-
+            JarvisMode.SLEEP,
             JarvisMode.FOCUS ->
                 NoReply
 
@@ -25,7 +23,7 @@ object AutoReplyOrchestrator {
 
             JarvisMode.WORK ->
                 AutoReply(
-                    message = "I'm working at the moment. I'll respond later.",
+                    message = "I'm working right now. Will respond later.",
                     reason = "WORK_MODE"
                 )
 
