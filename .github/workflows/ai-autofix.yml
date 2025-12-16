@@ -2,6 +2,7 @@ name: Android Build + AI Autofix
 
 on:
   push:
+  pull_request:
 
 permissions:
   contents: write
@@ -22,11 +23,36 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
-      - name: Initial Gradle build
-        run: ./gradlew build
-        continue-on-error: true
+      # 🔒 Hard safety check (prevents MissingClass forever)
+      - name: Validate AndroidManifest activity
+        run: |
+          MANIFEST="app/src/main/AndroidManifest.xml"
+          ACTIVITY=$(grep -oP 'android:name="\K[^"]+' "$MANIFEST")
 
-      - name: Run AI Autofix
+          if [[ "$ACTIVITY" == .* ]]; then
+            PACKAGE=$(grep -oP 'package="\K[^"]+' "$MANIFEST")
+            ACTIVITY="$PACKAGE$ACTIVITY"
+          fi
+
+          FILE_PATH=$(echo "$ACTIVITY" | sed 's/\./\//g').kt
+
+          if [[ ! -f "app/src/main/java/$FILE_PATH" ]]; then
+            echo "❌ Activity not found: $ACTIVITY"
+            exit 1
+          fi
+
+          echo "✅ Manifest activity OK: $ACTIVITY"
+
+      # 🧹 Clean build (Codespace parity)
+      - name: Clean
+        run: ./gradlew clean
+
+      # ✅ Real build (same as local)
+      - name: Lint + Assemble
+        run: ./gradlew lintDebug assembleDebug --stacktrace
+
+      # 🤖 AI Autofix must NEVER fail CI
+      - name: Run AI Autofix (non-blocking)
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-        run: python3 scripts/ai_autofix.py
+        run: python3 scripts/ai_autofix.py || true
