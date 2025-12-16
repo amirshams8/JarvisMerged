@@ -1,7 +1,7 @@
 package com.jarvismini.automation
 
-import com.jarvismini.engine.ReplyReason
 import com.jarvismini.core.JarvisMode
+import com.jarvismini.engine.ReplyReason
 
 object AutoReplyDecisionEngine {
 
@@ -24,14 +24,6 @@ object AutoReplyDecisionEngine {
 
     private fun isInCooldown(senderId: String, timestamp: Long): Boolean {
         // Stub — persistence later
-        return false
-    }
-}    private fun isInCooldown(senderId: String, timestamp: Long): Boolean {
-        // Stub — implement persistence later
-        return false
-    }
-
-    private fun isSleepModeActive(): Boolean {
         return false
     }
 }
