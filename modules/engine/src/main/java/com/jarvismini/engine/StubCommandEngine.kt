@@ -1,12 +1,8 @@
 package com.jarvismini.engine
 
-class StubCommandEngine : CommandEngine {
+object StubCommandEngine : CommandEngine {
 
-    override fun canHandle(input: String): Boolean {
-        return false
-    }
-
-    override fun handle(input: String): EngineResult {
-        return EngineResult.Error("No command handled")
+    override fun execute(input: String): EngineResult {
+        return EngineResult.Unhandled
     }
 }
