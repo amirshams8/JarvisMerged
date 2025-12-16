@@ -25,4 +25,5 @@ android {
 dependencies {
     implementation(project(":modules:smart"))
     implementation(project(":modules:engine"))
+    implementation(project(":modules:core"))
 }
