@@ -1,5 +1,5 @@
 package com.jarvismini.core
 
 object JarvisState {
-    var isEnabled: Boolean = true
+    var currentMode: JarvisMode = JarvisMode.NORMAL
 }
