@@ -2,7 +2,7 @@ import subprocess
 from logger import logger
 
 
-def commit_and_push(message: str, files: list[str]):
+def commit_changes(message: str, files: list[str]):
     logger.info("📦 Committing changes")
 
     subprocess.run(
@@ -15,9 +15,4 @@ def commit_and_push(message: str, files: list[str]):
         check=True
     )
 
-    subprocess.run(
-        ["git", "push"],
-        check=True
-    )
-
-    logger.info("🚀 Changes pushed to repository")
+    logger.info("✅ Commit created (not pushed)")
