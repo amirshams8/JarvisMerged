@@ -4,7 +4,6 @@ from scripts.logger import logger
 
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
-
 DEFAULT_MODEL = "mistralai/mistral-7b-instruct"
 
 
@@ -29,11 +28,21 @@ class OpenRouterProvider:
             "Content-Type": "application/json"
         }
 
-        r = requests.post(
+        response = requests.post(
             OPENROUTER_URL,
             headers=headers,
             json=payload,
-            timeout=120
+            timeout=60
+        )
+
+        response.raise_for_status()
+
+        return response.json()["choices"][0]["message"]["content"]
+
+
+def get_llm_provider():
+    logger.info("🧠 Using OpenRouter (free model)")
+    return OpenRouterProvider()
         )
 
         r.raise_for_status()
