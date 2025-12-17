@@ -1,7 +1,7 @@
 import sys
 import traceback
-from scripts.logger import logger
-from scripts.openrouter import get_llm_provider
+from logger import logger
+from openrouter import get_llm_provider
 
 
 def main():
