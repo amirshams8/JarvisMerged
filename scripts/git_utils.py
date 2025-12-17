@@ -1,8 +1,8 @@
 import subprocess
-from logger import logger
-
+from scripts.logger import logger
 
 def commit_changes(message: str, files: list[str]):
+    """Stage and commit specified files."""
     logger.info("📦 Committing changes")
 
     subprocess.run(
