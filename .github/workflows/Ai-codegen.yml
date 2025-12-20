@@ -22,4 +22,4 @@ jobs:
 
       - name: Run AI Code Generator
         run: |
-          python ai-code.py ai_output.txt
+          python ai-code.py ai-output.txt
