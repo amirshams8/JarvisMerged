@@ -105,17 +105,18 @@ def run_autofix_attempt(attempt: int) -> bool:
 
     prepare_context()
 
-    prompt = f"""
-You are fixing an Android/Kotlin build error.
-
-STRICT RULES:
-- Fix ONLY the given error
-- DO NOT restructure files
-- DO NOT move code between files
-- DO NOT add new classes
-- Prefer unified diff
-- If diff impossible, return FULL corrected file
-- NO explanations
+    prompt = f"""You are an AI autofix bot.
+You will receive build errors and repository context.
+You must output ONLY a valid unified git diff.
+No markdown, no code fences, no explanations.
+Example format:
+diff --git a/file.kt b/file.kt
+index 123..456 100644
+--- a/file.kt
++++ b/file.kt
+@@ -1,2 +1,3 @@
+...
+"""
 
 === BUILD ERROR ===
 File: {file_path}
