@@ -6,7 +6,7 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import com.jarvismini.automation.orchestrator.AutoReplyOrchestrator
 import com.jarvismini.automation.input.AutoReplyInput
-import com.jarvismini.automation.decision.AutoReplyDecision
+import com.jarvismini.automation.decision.ReplyDecision
 import com.jarvismini.automation.decision.NoReplyDecision
 
 /**
