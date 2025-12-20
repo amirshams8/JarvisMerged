@@ -79,6 +79,7 @@ FILE TREE (SELECTED FOLDERS)
 │   │   │   │   │   │   ├── jarvismini
 │   │   │   │   │   │   │   ├── core
 │   │   │   │   │   │   │   │   ├── AssistantProfile.kt
+│   │   │   │   │   │   │   │   ├── AssistantVoice.kt
 │   │   │   │   │   │   │   │   ├── CoreAppBridge.kt
 │   │   │   │   │   │   │   │   ├── Extensions.kt
 │   │   │   │   │   │   │   │   ├── JarvisMode.kt
@@ -935,6 +936,25 @@ object AssistantProfile {
 
     // Used everywhere
     fun addressUser(): String = USER_PRIMARY
+}
+
+
+===== FILE: modules/core/src/main/kotlin/com/jarvismini/core/AssistantVoice.kt =====
+package com.jarvismini.core
+
+object AssistantVoice {
+
+    fun driving(): String =
+        "${AssistantProfile.ASSISTANT_NAME}: ${AssistantProfile.addressUser()} is currently driving and will respond shortly."
+
+    fun working(): String =
+        "${AssistantProfile.ASSISTANT_NAME}: ${AssistantProfile.addressUser()} is working at the moment. Jarvis will notify him."
+
+    fun unavailable(reason: String): String =
+        "${AssistantProfile.ASSISTANT_NAME}: ${AssistantProfile.addressUser()} is unavailable right now ($reason)."
+
+    fun noReply(): String =
+        "${AssistantProfile.ASSISTANT_NAME}: No reply will be sent at this time."
 }
 
 
