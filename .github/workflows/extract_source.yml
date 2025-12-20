@@ -22,7 +22,7 @@ jobs:
           python-version: "3.11"
 
       - name: Generate file tree + source dump
-        run: python scripts/extract_repo_to_txt.py
+        run: python scripts/extract_repo.py
 
       - name: Commit & push
         run: |
