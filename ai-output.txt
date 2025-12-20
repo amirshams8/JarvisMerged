@@ -1,290 +1,46 @@
-// ===== FILE: modules/automation/src/main/kotlin/com/jarvismini/automation/AppAutomationService.kt =====
-package com.jarvismini.automation
+<!-- ===== FILE: app/src/main/AndroidManifest.xml ===== -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.jarvismini">
 
-import android.accessibilityservice.AccessibilityService
-import android.accessibilityservice.AccessibilityServiceInfo
-import android.view.accessibility.AccessibilityEvent
-import android.view.accessibility.AccessibilityNodeInfo
-import android.util.Log
-import com.jarvismini.automation.decision.ReplyDecision
-import com.jarvismini.automation.input.AutoReplyInput
-import com.jarvismini.automation.orchestrator.AutoReplyOrchestrator
-import com.jarvismini.core.JarvisState
+    <application
+        android:label="@string/app_name"
+        android:icon="@android:drawable/sym_def_app_icon"
+        android:allowBackup="true"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.JarvisMini">
 
-class AppAutomationService : AccessibilityService() {
+        <activity
+            android:name=".MainActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity>
 
-    private val TAG = "JarvisMini-AutoService"
+        <!-- Automation / Accessibility Service -->
+        <service
+            android:name="com.jarvismini.automation.AppAutomationService"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
 
-    override fun onServiceConnected() {
-        super.onServiceConnected()
-        Log.i(TAG, "Automation Service connected")
-        serviceInfo = AccessibilityServiceInfo().apply {
-            eventTypes = AccessibilityEvent.TYPE_NOTIFICATION_STATE_CHANGED or
-                         AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED
-            feedbackType = AccessibilityServiceInfo.FEEDBACK_GENERIC
-            notificationTimeout = 100
-            canRetrieveWindowContent = true
-        }
-    }
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/accessibility_service_config" />
+        </service>
 
-    override fun onAccessibilityEvent(event: AccessibilityEvent?) {
-        if (event == null) return
+    </application>
 
-        when (event.eventType) {
-            AccessibilityEvent.TYPE_NOTIFICATION_STATE_CHANGED -> {
-                // Notification arrived, try to open chat
-                event.parcelableData?.let { notif ->
-                    Log.i(TAG, "Notification detected: $notif")
-                    val root = rootInActiveWindow
-                    ChatOpener.openChat(this, root)
-                }
-            }
-
-            AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED -> {
-                val root = event.source ?: return
-
-                val messageText = MessageExtractor.getLastIncomingMessage(root)
-                val senderName = MessageExtractor.getSenderName(root)
-
-                if (messageText.isEmpty()) return
-
-                val input = AutoReplyInput(
-                    messageText = messageText,
-                    senderName = senderName,
-                    isFromOwner = false
-                )
-
-                val decision = AutoReplyOrchestrator.handle(input)
-
-                when (decision) {
-                    is ReplyDecision.AutoReply -> {
-                        // Prefix assistant identity
-                        val replyMessage = "Jarvis here. Hello Mr Shams! ${decision.message}"
-                        Log.i(TAG, "Jarvis Auto-Reply: $replyMessage")
-                        sendMessage(root, replyMessage)
-                    }
-                    ReplyDecision.NoReply -> {
-                        Log.i(TAG, "Jarvis will not reply")
-                    }
-                }
-
-                // Auto-close after processing
-                AutoCloser.closeChat(root)
-            }
-        }
-    }
-
-    private fun sendMessage(root: AccessibilityNodeInfo, message: String) {
-        val inputField = NodeFinder.findInputField(root)
-        val sendButton = NodeFinder.findSendButton(root)
-
-        if (inputField != null) {
-            val args = android.os.Bundle()
-            args.putCharSequence(android.view.accessibility.AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, message)
-            inputField.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args)
-            Log.i(TAG, "Message set in input field")
-        }
-
-        sendButton?.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-        Log.i(TAG, "Send button clicked")
-    }
-
-    override fun onInterrupt() {
-        Log.i(TAG, "Automation Service interrupted")
-    }
-}
-
-// ===== FILE: modules/automation/src/main/kotlin/com/jarvismini/automation/AutoCloser.kt =====
-package com.jarvismini.automation
-
-import android.view.accessibility.AccessibilityNodeInfo
-
-object AutoCloser {
-    fun closeChat(root: AccessibilityNodeInfo?) {
-        val back = try {
-            root?.findAccessibilityNodeInfosByViewId("com.whatsapp:id/back")
-        } catch (_: Exception) { null }
-
-        if (!back.isNullOrEmpty()) {
-            back.first().performAction(AccessibilityNodeInfo.ACTION_CLICK)
-        }
-    }
-}
-
-// ===== FILE: modules/automation/src/main/kotlin/com/jarvismini/automation/ChatOpener.kt =====
-package com.jarvismini.automation
-
-import android.accessibilityservice.AccessibilityService
-import android.util.Log
-import android.view.accessibility.AccessibilityNodeInfo
-
-object ChatOpener {
-
-    private const val TAG = "JarvisMini-ChatOpener"
-
-    private val unreadBadgeIds = listOf(
-        "com.whatsapp:id/unread_indicator",
-        "com.whatsapp:id/unread_count",
-        "com.whatsapp:id/message_count"
-    )
-
-    fun openChat(service: AccessibilityService, root: AccessibilityNodeInfo?) {
-        root ?: return
-
-        // Try “new message”
-        val nodes = root.findAccessibilityNodeInfosByText("new message")
-        if (!nodes.isNullOrEmpty()) {
-            nodes.first().performAction(AccessibilityNodeInfo.ACTION_CLICK)
-            Log.i(TAG, "Opened chat via 'new message'")
-            return
-        }
-
-        // Try unread badge
-        for (id in unreadBadgeIds) {
-            try {
-                val badges = root.findAccessibilityNodeInfosByViewId(id)
-                if (!badges.isNullOrEmpty()) {
-                    badges.first().performAction(AccessibilityNodeInfo.ACTION_CLICK)
-                    Log.i(TAG, "Opened chat via unread badge: $id")
-                    return
-                }
-            } catch (_: Exception) {}
-        }
-    }
-}
-
-// ===== FILE: modules/automation/src/main/kotlin/com/jarvismini/automation/MessageExtractor.kt =====
-package com.jarvismini.automation
-
-import android.view.accessibility.AccessibilityNodeInfo
-
-object MessageExtractor {
-
-    private val chatTitleIds = listOf(
-        "com.whatsapp:id/conversation_contact_name",
-        "com.whatsapp:id/contact_name",
-        "com.whatsapp:id/toolbar_title"
-    )
-
-    private val incomingMessageIds = listOf(
-        "com.whatsapp:id/message_text",
-        "com.whatsapp:id/message_text_in"
-    )
-
-    fun getSenderName(root: AccessibilityNodeInfo): String {
-        chatTitleIds.forEach { id ->
-            try {
-                val list = root.findAccessibilityNodeInfosByViewId(id)
-                if (!list.isNullOrEmpty()) {
-                    return list.first().text?.toString()?.trim() ?: ""
-                }
-            } catch (_: Exception) {}
-        }
-        return ""
-    }
-
-    fun getLastIncomingMessage(root: AccessibilityNodeInfo): String {
-        for (id in incomingMessageIds) {
-            try {
-                val nodes = root.findAccessibilityNodeInfosByViewId(id)
-                if (!nodes.isNullOrEmpty()) {
-                    return nodes.last().text?.toString() ?: ""
-                }
-            } catch (_: Exception) {}
-        }
-        return ""
-    }
-}
-
-// ===== FILE: modules/automation/src/main/kotlin/com/jarvismini/automation/NodeFinder.kt =====
-package com.jarvismini.automation
-
-import android.util.Log
-import android.view.accessibility.AccessibilityNodeInfo
-
-object NodeFinder {
-
-    private const val TAG = "JarvisMini-NodeFinder"
-
-    private val inputIds = listOf(
-        "com.whatsapp:id/entry",
-        "com.whatsapp:id/voice_note_text_input",
-        "com.whatsapp:id/entry_container",
-        "com.whatsapp:id/entry_text",
-        "com.whatsapp:id/entry_input"
-    )
-
-    private val sendButtonIds = listOf(
-        "com.whatsapp:id/send",
-        "com.whatsapp:id/send_btn",
-        "com.whatsapp:id/send_button",
-        "com.whatsapp:id/send_icon",
-        "com.whatsapp:id/send_message"
-    )
-
-    fun findInputField(root: AccessibilityNodeInfo): AccessibilityNodeInfo? {
-        for (id in inputIds) {
-            safeFindById(root, id)?.firstOrNull()?.let { return it }
-        }
-
-        findByClass(root, "android.widget.EditText")?.let { return it }
-
-        for (id in inputIds) {
-            safeFindById(root, id)?.firstOrNull()?.parent?.let { parent ->
-                if (parent.className?.contains("EditText") == true) return parent
-            }
-        }
-
-        Log.w(TAG, "Input field not found")
-        return null
-    }
-
-    fun findSendButton(root: AccessibilityNodeInfo): AccessibilityNodeInfo? {
-        for (id in sendButtonIds) {
-            safeFindById(root, id)?.firstOrNull()?.let { return it }
-        }
-
-        findByClass(root, "android.widget.ImageButton")?.let { return it }
-
-        Log.w(TAG, "Send button not found")
-        return null
-    }
-
-    private fun safeFindById(node: AccessibilityNodeInfo, id: String): List<AccessibilityNodeInfo>? {
-        return try { node.findAccessibilityNodeInfosByViewId(id) } catch (_: Exception) { null }
-    }
-
-    private fun findByClass(node: AccessibilityNodeInfo, className: String): AccessibilityNodeInfo? {
-        if (node.className == className) return node
-        for (i in 0 until node.childCount) {
-            val child = node.getChild(i) ?: continue
-            findByClass(child, className)?.let { return it }
-        }
-        return null
-    }
-}
-
-// ===== FILE: modules/automation/src/main/kotlin/com/jarvismini/automation/ModeGuard.kt =====
-package com.jarvismini.automation
-
-import com.jarvismini.core.JarvisMode
-import com.jarvismini.core.JarvisState
-
-object ModeGuard {
-
-    fun allowsReply(): Boolean {
-        return when (JarvisState.currentMode) {
-            JarvisMode.NORMAL -> true
-            JarvisMode.WORK -> true
-            JarvisMode.DRIVING -> true
-            JarvisMode.SLEEP -> false
-            JarvisMode.FOCUS -> false
-        }
-    }
-}
-
-// ===== FILE: modules/automation/src/main/kotlin/com/jarvismini/automation/AutomationStubs.kt =====
-package com.jarvismini.automation
-
-fun ChatAllowed(): Boolean = false
-fun generateReply(text: String): String = ""
+</manifest>
+<!-- ===== FILE: app/src/main/res/xml/accessibility_service_config.xml ===== -->
+<accessibility-service
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:accessibilityEventTypes="typeAllMask"
+    android:accessibilityFeedbackType="feedbackGeneric"
+    android:notificationTimeout="100"
+    android:canRetrieveWindowContent="true"
+    android:description="@string/service_desc"
+    android:settingsActivity="" />
