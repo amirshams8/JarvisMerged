@@ -1,34 +1,38 @@
 package com.jarvismini.automation.orchestrator
 
-import com.jarvismini.automation.decision.ReplyDecision
-import com.jarvismini.automation.decision.ReplyDecision.AutoReply
-import com.jarvismini.automation.decision.ReplyDecision.NoReply
+import com.jarvismini.automation.decision.AutoReplyDecision
+import com.jarvismini.automation.decision.NoReplyDecision
+import com.jarvismini.automation.input.AutoReplyInput
 import com.jarvismini.core.JarvisMode
 import com.jarvismini.core.JarvisState
 
+/**
+ * Orchestrator for auto-replies.
+ * Decides whether Jarvis should reply, notify, or ignore.
+ */
 object AutoReplyOrchestrator {
 
-    fun decide(inputText: String): ReplyDecision {
+    /**
+     * Processes an incoming message and returns a decision.
+     */
+    fun handle(input: AutoReplyInput): Any { // Using Any for build-safety; later can use sealed class
+        // Mode check
         return when (JarvisState.currentMode) {
-
-            JarvisMode.SLEEP,
-            JarvisMode.FOCUS ->
-                NoReply
-
-            JarvisMode.DRIVING ->
-                AutoReply(
-                    message = "I'm driving right now. Will get back soon.",
-                    reason = "DRIVING_MODE"
-                )
-
-            JarvisMode.WORK ->
-                AutoReply(
-                    message = "I'm working right now. Will respond later.",
-                    reason = "WORK_MODE"
-                )
-
-            JarvisMode.NORMAL ->
-                NoReply
+            JarvisMode.SLEEP, JarvisMode.FOCUS -> NoReplyDecision
+            JarvisMode.DRIVING -> AutoReplyDecision(
+                message = "I'm driving. I'll get back to you shortly."
+            )
+            JarvisMode.WORK -> AutoReplyDecision(
+                message = "I'm working now. I will respond later."
+            )
+            JarvisMode.NORMAL -> NoReplyDecision
         }
+    }
+
+    /**
+     * Optional init for future context wiring.
+     */
+    fun init() {
+        // Placeholder for any future startup setup
     }
 }
