@@ -22,12 +22,12 @@ jobs:
           python-version: "3.11"
 
       - name: Generate file tree + source dump
-        run: python scripts/extract_repo.py
+        run: python scripts/extract_repo_to_txt.py
 
       - name: Commit & push
         run: |
           git config user.name "repo-source-bot"
           git config user.email "bot@users.noreply.github.com"
-          git add repo_source.txt
+          git add repo_source_dump.txt
           git commit -m "Auto: repo file tree + source dump" || echo "No changes"
           git push
