@@ -118,14 +118,14 @@ RULES (MANDATORY):
 The output MUST start with:
 diff --git
 
-Example (format only):
+Example (FORMAT ONLY, content irrelevant):
 diff --git a/app/src/main/kotlin/Example.kt b/app/src/main/kotlin/Example.kt
 index 1111111..2222222 100644
 --- a/app/src/main/kotlin/Example.kt
 +++ b/app/src/main/kotlin/Example.kt
 @@ -1,3 +1,4 @@
  package example
-+// fix
++val __fix = true
 """
 
 === BUILD ERROR ===
