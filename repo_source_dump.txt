@@ -121,12 +121,6 @@ FILE TREE (SELECTED FOLDERS)
 │   │   │   │   │   │   │   │   ├── RateLimiter.kt
 │   │   │   │   │   │   │   │   ├── SleepMode.kt
 │   │   │   │   │   │   │   │   ├── SmartFilters.kt
-│   │   │   ├── test
-│   │   │   │   ├── java
-│   │   │   │   │   ├── com
-│   │   │   │   │   │   ├── jarvismini
-│   │   │   │   │   │   │   ├── smart
-│   │   │   │   │   │   │   │   ├── SmartTest.kt
 │   ├── ui
 │   │   ├── MainActivity.kt
 │   │   ├── build.gradle.kts
@@ -1382,9 +1376,6 @@ object SmartFilters {
         return true
     }
 }
-
-
-===== FILE: modules/smart/src/test/java/com/jarvismini/smart/SmartTest.kt =====
 
 
 ===== FILE: modules/ui/MainActivity.kt =====
