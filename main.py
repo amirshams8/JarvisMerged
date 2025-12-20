@@ -6,12 +6,12 @@ from scripts.logger import logger
 from scripts.llm import get_llm_provider
 from scripts.error_parser import parse_build_errors, extract_code_snippet
 from scripts.patch_applier import apply_patch, is_structurally_corrupt
-from scripts.git_utils import commit_changes
-from scripts.github import create_branch, push_branch
+from scripts.git_utils import commit_changes, create_branch, push_branch
 
 MAX_RETRIES = 3
 DEBUG_DIR = Path(".ai_debug")
 CONTEXT_DIR = Path(".ai_context")
+MAX_FILE_CHARS = 8000
 
 
 # --------------------------------------------------
@@ -20,11 +20,11 @@ CONTEXT_DIR = Path(".ai_context")
 
 def build_file_tree() -> str:
     result = subprocess.run(
-        ["bash", "-lc", "find android -type f | sort"],
+        ["find", "android", "-type", "f"],
         capture_output=True,
         text=True,
     )
-    return result.stdout.strip()
+    return "\n".join(sorted(result.stdout.strip().splitlines()))
 
 
 def read_file_safe(path: Path) -> str:
@@ -36,7 +36,6 @@ def read_file_safe(path: Path) -> str:
 
 def prepare_context():
     CONTEXT_DIR.mkdir(exist_ok=True)
-
     (CONTEXT_DIR / "file_tree.txt").write_text(build_file_tree())
     (CONTEXT_DIR / "AndroidManifest.xml").write_text(
         read_file_safe(Path("android/app/src/main/AndroidManifest.xml"))
@@ -58,6 +57,55 @@ def read_build_log():
         return False, ""
 
 
+def filter_errors_only(errors: list[dict]) -> list[dict]:
+    """Remove warnings and keep only real build errors"""
+    filtered = []
+    for e in errors:
+        msg = (e.get("message") or "").lower()
+        if any(k in msg for k in ["warning", "deprecated", "uses or overrides a deprecated api"]):
+            continue
+        filtered.append(e)
+    return filtered
+
+
+def classify_error(msg: str) -> str:
+    msg = msg.lower()
+    if "unresolved reference" in msg or "cannot find symbol" in msg:
+        return "missing_symbol"
+    if "type mismatch" in msg:
+        return "type_error"
+    if "overrides nothing" in msg:
+        return "override_error"
+    if "manifest merger failed" in msg:
+        return "manifest"
+    if "execution failed for task" in msg:
+        return "gradle"
+    if "cannot access" in msg:
+        return "visibility"
+    return "generic"
+
+
+def retry_mode(attempt: int) -> str:
+    if attempt == 1:
+        return "normal"
+    if attempt == 2:
+        return "strict"
+    return "emergency"
+
+
+def estimate_confidence(diff: str) -> float:
+    score = 1.0
+    if diff.count("diff --git") > 4:
+        score -= 0.3
+    if "todo" in diff.lower() or "fixme" in diff.lower():
+        score -= 0.3
+    if "stub" in diff.lower():
+        score -= 0.2
+    if "temporary" in diff.lower():
+        score -= 0.2
+    return max(score, 0.0)
+
+
 # --------------------------------------------------
 # Autofix attempt
 # --------------------------------------------------
@@ -71,7 +119,8 @@ def run_autofix_attempt(attempt: int) -> bool:
         return True
 
     errors = parse_build_errors(build_log)
-    logger.info(f"📋 Parsed {len(errors)} build errors")
+    errors = filter_errors_only(errors)
+    logger.info(f"📋 Parsed {len(errors)} build errors (warnings ignored)")
 
     if not errors:
         return False
@@ -94,7 +143,6 @@ def run_autofix_attempt(attempt: int) -> bool:
         (DEBUG_DIR / "structural_failure.txt").write_text(
             f"File: {file_path}\n\n{full_file}"
         )
-
         create_branch("ai-autofix/structural-failure")
         commit_changes(
             "debug: structural corruption detected",
@@ -105,27 +153,46 @@ def run_autofix_attempt(attempt: int) -> bool:
 
     prepare_context()
 
+    error_type = classify_error(message)
+    mode = retry_mode(attempt)
+
+    extra_rules = ""
+    if mode == "strict":
+        extra_rules = "\nINVALID OUTPUT PREVIOUSLY. RETURN ONLY A GIT DIFF."
+    elif mode == "emergency":
+        extra_rules = "\nEMERGENCY MODE. APPLY MINIMAL STUB FIX ONLY."
+
     prompt = f"""SYSTEM:
-You are an automated build-fixing agent.
+You are an automated Android build-fixing agent.{extra_rules}
 
 RULES (MANDATORY):
 - Output ONLY a valid unified git diff.
 - Do NOT include explanations, markdown, comments, or code fences.
-- Do NOT repeat build errors.
+- Do NOT repeat warnings.
+- Fix ONLY build-breaking errors.
 - Every change MUST be in diff format.
-- If unsure, still output a best-effort diff.
+- If unsure, apply the smallest possible stub fix.
 
 The output MUST start with:
 diff --git
 
-Example (FORMAT ONLY, content irrelevant):
-diff --git a/app/src/main/kotlin/Example.kt b/app/src/main/kotlin/Example.kt
-index 1111111..2222222 100644
---- a/app/src/main/kotlin/Example.kt
-+++ b/app/src/main/kotlin/Example.kt
-@@ -1,3 +1,4 @@
- package example
-+val __fix = true
+=== FIX STRATEGY ===
+Error category: {error_type}
+
+Rules:
+- missing_symbol → add minimal Kotlin stub
+- type_error → adjust signature or cast
+- override_error → fix method signature
+- manifest → modify AndroidManifest.xml only
+- gradle → modify build.gradle only
+- generic → minimal local fix only
+
+=== ANDROID RULES ===
+- Kotlin only (no Java)
+- Do NOT add dependencies
+- Do NOT refactor unrelated files
+- Prefer stubs over logic
+- Touch the fewest files possible
 
 === BUILD ERROR ===
 File: {file_path}
@@ -136,7 +203,7 @@ Error: {message}
 {snippet.get('code') if snippet else ''}
 
 === FULL FILE ===
-{full_file}
+{full_file[:MAX_FILE_CHARS]}
 
 === PROJECT FILE TREE ===
 {read_file_safe(CONTEXT_DIR / "file_tree.txt")}
@@ -155,28 +222,55 @@ Error: {message}
     debug_file = DEBUG_DIR / f"attempt_{attempt}.txt"
     debug_file.write_text(response)
 
+    # 🔒 Hard diff validation
+    response = response.lstrip()
+    if not response.startswith("diff --git"):
+        logger.warning("⚠️ Invalid LLM output (not a diff)")
+        branch = f"ai-autofix/invalid-output-{attempt}"
+        create_branch(branch)
+        commit_changes(
+            f"debug: invalid LLM output attempt {attempt}",
+            [str(debug_file)]
+        )
+        push_branch(branch)
+        return False
+
     patched = apply_patch(response, build_log)
     if not patched:
         logger.warning("⚠️ Patch failed — committing AI output")
-
-        create_branch("ai-autofix/debug-output")
+        branch = f"ai-autofix/debug-output-{attempt}"
+        create_branch(branch)
         commit_changes(
             f"debug: AI output attempt {attempt}",
             [str(debug_file)]
         )
-        push_branch("ai-autofix/debug-output")
+        push_branch(branch)
         return False
 
     subprocess.run(["./gradlew", "build"], check=False)
     ok, _ = read_build_log()
 
     if not ok:
-        subprocess.run(["git", "checkout", "--"] + patched)
+        subprocess.run(["git", "reset", "--hard", "HEAD"], check=False)
         return False
 
-    create_branch("ai-autofix/build-fix")
+    # 🔹 Confidence check
+    confidence = estimate_confidence(response)
+    logger.info(f"🧠 Fix confidence: {confidence:.2f}")
+    if confidence < 0.5:
+        branch = f"ai-autofix/low-confidence-{attempt}"
+        create_branch(branch)
+        commit_changes(
+            f"debug: low confidence autofix ({confidence:.2f})",
+            patched
+        )
+        push_branch(branch)
+        return False
+
+    branch = "ai-autofix/build-fix"
+    create_branch(branch)
     commit_changes("fix: AI autofix build error", patched)
-    push_branch("ai-autofix/build-fix")
+    push_branch(branch)
 
     logger.info("🎉 Autofix successful")
     return True
