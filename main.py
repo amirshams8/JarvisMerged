@@ -105,17 +105,27 @@ def run_autofix_attempt(attempt: int) -> bool:
 
     prepare_context()
 
-    prompt = f"""You are an AI autofix bot.
-You will receive build errors and repository context.
-You must output ONLY a valid unified git diff.
-No markdown, no code fences, no explanations.
-Example format:
-diff --git a/file.kt b/file.kt
-index 123..456 100644
---- a/file.kt
-+++ b/file.kt
-@@ -1,2 +1,3 @@
-...
+    prompt = f"""SYSTEM:
+You are an automated build-fixing agent.
+
+RULES (MANDATORY):
+- Output ONLY a valid unified git diff.
+- Do NOT include explanations, markdown, comments, or code fences.
+- Do NOT repeat build errors.
+- Every change MUST be in diff format.
+- If unsure, still output a best-effort diff.
+
+The output MUST start with:
+diff --git
+
+Example (format only):
+diff --git a/app/src/main/kotlin/Example.kt b/app/src/main/kotlin/Example.kt
+index 1111111..2222222 100644
+--- a/app/src/main/kotlin/Example.kt
++++ b/app/src/main/kotlin/Example.kt
+@@ -1,3 +1,4 @@
+ package example
++// fix
 """
 
 === BUILD ERROR ===
