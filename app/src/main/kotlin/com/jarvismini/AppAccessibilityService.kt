@@ -5,7 +5,7 @@ import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import com.jarvismini.automation.orchestrator.AutoReplyOrchestrator
 import com.jarvismini.automation.input.AutoReplyInput
-import com.jarvismini.automation.decision.AutoReplyDecision
+import com.jarvismini.automation.decision.ReplyDecision
 import com.jarvismini.automation.decision.NoReplyDecision
 
 /**
@@ -34,12 +34,11 @@ class AppAccessibilityService : AccessibilityService() {
 
             // Log the decision for testing
             when (decision) {
-                is AutoReplyDecision -> {
-                    println("Jarvis Auto-Reply: ${decision.message}")
-                }
-                is NoReplyDecision -> {
-                    println("Jarvis will not reply")
-                }
+    is ReplyDecision.AutoReply ->
+        println("Jarvis Auto-Reply: ${decision.message}")
+
+    ReplyDecision.NoReply ->
+        println("Jarvis will not reply")
             }
         }
     }
