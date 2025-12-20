@@ -141,12 +141,6 @@ FILE TREE (SELECTED FOLDERS)
 │   │   │   │   │   │   ├── activity_main.xml
 │   │   │   │   │   ├── values
 │   │   │   │   │   │   ├── styles.xml
-│   │   │   ├── test
-│   │   │   │   ├── java
-│   │   │   │   │   ├── com
-│   │   │   │   │   │   ├── jarvismini
-│   │   │   │   │   │   │   ├── ui
-│   │   │   │   │   │   │   │   ├── UiTest.kt
 ├── gradle/wrapper
 │   ├── gradle-wrapper.properties
 
@@ -1473,9 +1467,6 @@ class SettingsActivity : Activity() {
 <resources>
     <style name="Theme.JarvisMini" />
 </resources>
-
-
-===== FILE: modules/ui/src/test/java/com/jarvismini/ui/UiTest.kt =====
 
 
 ===== FILE: gradle/wrapper/gradle-wrapper.properties =====
