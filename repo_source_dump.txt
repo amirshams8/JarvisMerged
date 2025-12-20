@@ -34,7 +34,6 @@ FILE TREE (SELECTED FOLDERS)
 │   │   │   │   ├── values
 │   │   │   │   │   ├── colors.xml
 │   │   │   │   │   ├── strings.xml
-│   │   │   │   │   ├── styles.xml
 │   │   │   │   │   ├── themes.xml
 │   │   │   │   ├── xml
 │   │   │   │   │   ├── accessibility_service_config.xml
@@ -426,18 +425,6 @@ class MainActivity : AppCompatActivity() {
 <resources>
   <string name="app_name">Jarvis Merged</string>
   <string name="service_desc">Jarvis automation service for WhatsApp reply.</string>
-</resources>
-
-
-===== FILE: app/src/main/res/values/styles.xml =====
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-
-    <!-- Base app theme -->
-    <style name="Theme" parent="Theme.Material3.DayNight.NoActionBar">
-        <item name="android:windowBackground">@android:color/black</item>
-    </style>
-
 </resources>
 
 
