@@ -143,6 +143,17 @@ FILE TREE (SELECTED FOLDERS)
 │   │   │   │   │   │   ├── styles.xml
 ├── gradle/wrapper
 │   ├── gradle-wrapper.properties
+├── scripts
+│   ├── __init__.py
+│   ├── error_parser.py
+│   ├── extract_repo_to_txt.py
+│   ├── git_utils.py
+│   ├── github.py
+│   ├── llm.py
+│   ├── logger.py
+│   ├── openrouter.py
+│   ├── patch_applier.py
+│   ├── pr_utils.py
 
 ================================
 SOURCE CODE
