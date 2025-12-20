@@ -126,7 +126,6 @@ index 1111111..2222222 100644
 @@ -1,3 +1,4 @@
  package example
 +val __fix = true
-"""
 
 === BUILD ERROR ===
 File: {file_path}
