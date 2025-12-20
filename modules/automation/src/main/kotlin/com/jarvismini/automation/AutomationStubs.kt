@@ -1,9 +1,4 @@
 package com.jarvismini.automation
 
-fun ChatAllowed(): Boolean {
-    return false
-}
-
-fun generateReply(text: String): String {
-    return ""
-}
+fun ChatAllowed(): Boolean = false
+fun generateReply(text: String): String = ""

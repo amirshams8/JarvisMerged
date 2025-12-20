@@ -57,8 +57,10 @@ class AppAutomationService : AccessibilityService() {
 
                 when (decision) {
                     is ReplyDecision.AutoReply -> {
-                        Log.i(TAG, "Jarvis Auto-Reply: ${decision.message}")
-                        sendMessage(root, decision.message)
+                        // Prefix assistant identity
+                        val replyMessage = "Jarvis here. Hello Mr Shams! ${decision.message}"
+                        Log.i(TAG, "Jarvis Auto-Reply: $replyMessage")
+                        sendMessage(root, replyMessage)
                     }
                     ReplyDecision.NoReply -> {
                         Log.i(TAG, "Jarvis will not reply")

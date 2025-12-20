@@ -2,9 +2,6 @@ package com.jarvismini.automation
 
 import android.view.accessibility.AccessibilityNodeInfo
 
-/**
- * Extracts sender name + last received message text from WhatsApp.
- */
 object MessageExtractor {
 
     private val chatTitleIds = listOf(
@@ -35,7 +32,6 @@ object MessageExtractor {
             try {
                 val nodes = root.findAccessibilityNodeInfosByViewId(id)
                 if (!nodes.isNullOrEmpty()) {
-                    // last element is latest chat message
                     return nodes.last().text?.toString() ?: ""
                 }
             } catch (_: Exception) {}
