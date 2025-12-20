@@ -1,15 +1,19 @@
 package com.jarvismini.automation.decision
 
 /**
- * Single, canonical reply decision model.
- * DO NOT duplicate this anywhere else.
+ * Final decision returned by automation layer.
  */
 sealed class ReplyDecision {
 
-    object NoReply : ReplyDecision()
-
+    /**
+     * Jarvis should auto-reply with this message.
+     */
     data class AutoReply(
-        val message: String,
-        val reason: String = ""
+        val message: String
     ) : ReplyDecision()
+
+    /**
+     * Jarvis should not reply.
+     */
+    object NoReply : ReplyDecision()
 }
