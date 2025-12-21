@@ -29,7 +29,7 @@ class AppAutomationService : AccessibilityService() {
             canRetrieveWindowContent = true
         }
 
-        serviceInfo = info
+        setServiceInfo(info)
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
