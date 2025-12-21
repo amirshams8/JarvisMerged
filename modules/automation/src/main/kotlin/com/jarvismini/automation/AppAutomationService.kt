@@ -17,20 +17,20 @@ class AppAutomationService : AccessibilityService() {
     }
 
     override fun onServiceConnected() {
-        super.onServiceConnected()
-        Log.i(TAG, "Automation Service connected")
+    super.onServiceConnected()
+    Log.i(TAG, "Automation Service connected")
 
-        val info = AccessibilityServiceInfo().apply {
-            eventTypes =
-                AccessibilityEvent.TYPE_NOTIFICATION_STATE_CHANGED or
-                AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED
-            feedbackType = AccessibilityServiceInfo.FEEDBACK_GENERIC
-            notificationTimeout = 100
-            canRetrieveWindowContent = true
-        }
-
-        setServiceInfo(info)
+    val info = AccessibilityServiceInfo().apply {
+        eventTypes =
+            AccessibilityEvent.TYPE_NOTIFICATION_STATE_CHANGED or
+            AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED
+        feedbackType = AccessibilityServiceInfo.FEEDBACK_GENERIC
+        notificationTimeout = 100
+        canRetrieveWindowContent = true
     }
+
+    setServiceInfo(info)
+}
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         if (event == null) return
