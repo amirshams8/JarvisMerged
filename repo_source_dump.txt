@@ -36,7 +36,7 @@ FILE TREE (SELECTED FOLDERS)
 │   │   │   │   │   ├── strings.xml
 │   │   │   │   │   ├── themes.xml
 │   │   │   │   ├── xml
-│   │   │   │   │   ├── accessibility_service_config.xml
+│   │   │   │   │   ├── accessibility_service.xml
 │   │   ├── test
 │   │   │   ├── java
 │   │   │   │   ├── com
@@ -495,7 +495,7 @@ class MainActivity : AppCompatActivity() {
 </resources>
 
 
-===== FILE: app/src/main/res/xml/accessibility_service_config.xml =====
+===== FILE: app/src/main/res/xml/accessibility_service.xml =====
 <?xml version="1.0" encoding="utf-8"?>
 <accessibility-service
     xmlns:android="http://schemas.android.com/apk/res/android"
