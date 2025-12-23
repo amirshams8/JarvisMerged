@@ -26,6 +26,7 @@ class AppAutomationService : AccessibilityService() {
         Log.e("JARVIS_PROOF", "SERVICE INTERRUPTED")
     }
 }
+
 <!-- ===== FILE: app/src/main/res/xml/accessibility_service.xml ===== -->
 <?xml version="1.0" encoding="utf-8"?>
 <accessibility-service
@@ -34,6 +35,7 @@ class AppAutomationService : AccessibilityService() {
     android:accessibilityFeedbackType="feedbackGeneric"
     android:canRetrieveWindowContent="true"
     android:description="@string/service_desc" />
+
 <!-- ===== FILE: app/src/main/AndroidManifest.xml ===== -->
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
@@ -69,6 +71,7 @@ class AppAutomationService : AccessibilityService() {
 
     </application>
 </manifest>
+
 <!-- ===== FILE: app/src/main/res/values/strings.xml ===== -->
 <resources>
     <string name="app_name">Jarvis Merged</string>
