@@ -1,33 +1,5 @@
-// ===== FILE: modules/automation/src/main/kotlin/com/jarvismini/automation/AppAutomationService.kt =====
-package com.jarvismini.automation
-
-import android.accessibilityservice.AccessibilityService
-import android.util.Log
-import android.view.accessibility.AccessibilityEvent
-import android.widget.Toast
-
-class AppAutomationService : AccessibilityService() {
-
-    override fun onServiceConnected() {
-        super.onServiceConnected()
-
-        Log.e("JARVIS_PROOF", "🔥 SERVICE CONNECTED")
-        Toast.makeText(
-            this,
-            "JARVIS ACCESSIBILITY CONNECTED",
-            Toast.LENGTH_LONG
-        ).show()
-    }
-
-    override fun onAccessibilityEvent(event: AccessibilityEvent?) {
-        Log.e("JARVIS_PROOF", "EVENT RECEIVED: ${event?.eventType}")
-    }
-
-    override fun onInterrupt() {
-        Log.e("JARVIS_PROOF", "SERVICE INTERRUPTED")
-    }
-}
-<!-- ===== FILE: app/src/main/AndroidManifest.xml ===== -->
+===== FILE: app/src/main/AndroidManifest.xml =====
+<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.jarvismini">
 
@@ -65,16 +37,71 @@ class AppAutomationService : AccessibilityService() {
 
     </application>
 </manifest>
-<!-- ===== FILE: app/src/main/res/xml/accessibility_service.xml ===== -->
+
+
+===== FILE: app/src/main/res/xml/accessibility_service.xml =====
+<?xml version="1.0" encoding="utf-8"?>
 <accessibility-service
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:accessibilityEventTypes="typeAllMask"
     android:accessibilityFeedbackType="feedbackGeneric"
-    android:accessibilityFlags="flagReportViewIds|flagRetrieveInteractiveWindows"
+    android:accessibilityFlags="
+        flagReportViewIds
+        | flagRetrieveInteractiveWindows
+        | flagIncludeNotImportantViews"
     android:canRetrieveWindowContent="true"
-    android:notificationTimeout="100"
+    android:notificationTimeout="50"
     android:description="@string/service_desc"/>
-<!-- ===== FILE: app/src/main/res/values/strings.xml ===== -->
+
+
+===== FILE: modules/automation/src/main/kotlin/com/jarvismini/automation/AppAutomationService.kt =====
+package com.jarvismini.automation
+
+import android.accessibilityservice.AccessibilityService
+import android.view.accessibility.AccessibilityEvent
+import android.util.Log
+import android.widget.Toast
+
+class AppAutomationService : AccessibilityService() {
+
+    private val TAG = "JARVIS_PROOF"
+    private val TARGET_PACKAGE = "com.whatsapp"
+
+    override fun onServiceConnected() {
+        super.onServiceConnected()
+
+        Log.e(TAG, "SERVICE CONNECTED")
+
+        Toast.makeText(
+            this,
+            "JARVIS ACCESSIBILITY CONNECTED",
+            Toast.LENGTH_LONG
+        ).show()
+    }
+
+    override fun onAccessibilityEvent(event: AccessibilityEvent?) {
+        if (event == null) return
+
+        val pkg = event.packageName?.toString() ?: return
+        if (pkg != TARGET_PACKAGE) return
+
+        Log.e(TAG, "WHATSAPP EVENT: ${event.eventType}")
+
+        Toast.makeText(
+            this,
+            "WhatsApp event detected",
+            Toast.LENGTH_SHORT
+        ).show()
+    }
+
+    override fun onInterrupt() {
+        Log.e(TAG, "SERVICE INTERRUPTED")
+    }
+}
+
+
+===== FILE: app/src/main/res/values/strings.xml =====
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Jarvis Merged</string>
     <string name="service_desc">Jarvis accessibility automation service</string>
