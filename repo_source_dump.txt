@@ -504,7 +504,7 @@ class MainActivity : AppCompatActivity() {
 
     android:accessibilityEventTypes="typeAllMask"
 
-    android:accessibilityFeedbackType="feedbackAllMask"
+    android:accessibilityFeedbackType="feedbackGeneric"
 
     android:accessibilityFlags="
         flagReportViewIds
