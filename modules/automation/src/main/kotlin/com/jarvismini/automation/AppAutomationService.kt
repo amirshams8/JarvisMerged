@@ -69,16 +69,27 @@ class AppAutomationService : AccessibilityService() {
     }
 
     private fun showDebugNotification(text: String) {
-        val notification = NotificationCompat.Builder(this, CHANNEL_ID)
-            .setSmallIcon(android.R.drawable.sym_action_chat)
-            .setContentTitle("Jarvis")
-            .setContentText(text)
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .build()
 
-        val manager =
-            getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        manager.notify(System.currentTimeMillis().toInt(), notification)
+    // ✅ Android 13+ runtime permission check
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        if (checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS)
+            != android.content.pm.PackageManager.PERMISSION_GRANTED
+        ) {
+            Log.w(TAG, "🚫 Notification permission not granted")
+            return
+        }
+    }
+
+    val notification = NotificationCompat.Builder(this, CHANNEL_ID)
+        .setSmallIcon(android.R.drawable.sym_action_chat)
+        .setContentTitle("Jarvis")
+        .setContentText(text)
+        .setPriority(NotificationCompat.PRIORITY_HIGH)
+        .build()
+
+    val manager =
+        getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+    manager.notify(System.currentTimeMillis().toInt(), notification)
     }
 
     private fun createNotificationChannel() {
