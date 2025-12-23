@@ -26,4 +26,5 @@ dependencies {
     implementation(project(":modules:smart"))
     implementation(project(":modules:engine"))
     implementation(project(":modules:core"))
+    implementation("androidx.core:core-ktx:1.12.0")
 }
