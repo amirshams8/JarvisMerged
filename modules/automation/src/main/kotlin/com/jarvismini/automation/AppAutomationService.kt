@@ -1,111 +1,70 @@
 package com.jarvismini.automation
 
 import android.accessibilityservice.AccessibilityService
-import android.accessibilityservice.AccessibilityServiceInfo
-import android.app.NotificationChannel
-import android.app.NotificationManager
-import android.content.Context
-import android.os.Build
-import android.os.Bundle
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
-import androidx.core.app.NotificationCompat
 
 class AppAutomationService : AccessibilityService() {
 
     private val TAG = "JarvisMini"
-    private val CHANNEL_ID = "jarvis_debug"
+    private val TARGET_PACKAGE = "com.whatsapp"
+
+    private var lastSeenMessage: String? = null
 
     override fun onServiceConnected() {
-        super.onServiceConnected()
-
-        Log.i(TAG, "🔥 ACCESSIBILITY SERVICE CONNECTED")
-
-        // ⚠️ DO NOT override serviceInfo fields here
-        createNotificationChannel()
-        showDebugNotification("Service connected & alive")
+        Log.i(TAG, "✅ Accessibility Service CONNECTED")
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         if (event == null) return
 
-        Log.d(
-            TAG,
-            "📡 EVENT: ${AccessibilityEvent.eventTypeToString(event.eventType)} | pkg=${event.packageName}"
-        )
+        val pkg = event.packageName?.toString() ?: return
 
-        // TEMP: accept ALL events for debugging
+        // 🔒 WhatsApp only
+        if (pkg != TARGET_PACKAGE) return
+
+        // 🔒 Content changes only
+        if (event.eventType != AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED) return
+
         val root = rootInActiveWindow ?: return
 
-        // Proof-of-life notification
-        showDebugNotification("Event from ${event.packageName}")
+        val message = extractLatestMessage(root) ?: return
 
-        // ⚠️ Disable auto-reply until detection confirmed
-        // sendMessage(root, "Hello Mr Shams, Jarvis here.")
+        // 🔁 Ignore duplicates
+        if (message == lastSeenMessage) return
+        lastSeenMessage = message
+
+        Log.i(TAG, "📩 NEW MESSAGE: $message")
+
+        // 🚫 Auto-reply OFF (next step)
+        // sendReply(root)
     }
 
-    private fun sendMessage(root: AccessibilityNodeInfo, message: String) {
-        val inputField = NodeFinder.findInputField(root)
-        val sendButton = NodeFinder.findSendButton(root)
+    private fun extractLatestMessage(root: AccessibilityNodeInfo): String? {
+        val queue = ArrayDeque<AccessibilityNodeInfo>()
+        queue.add(root)
 
-        if (inputField == null || sendButton == null) {
-            Log.w(TAG, "❌ Input or Send button not found")
-            return
+        var latestText: String? = null
+
+        while (queue.isNotEmpty()) {
+            val node = queue.removeFirst()
+
+            if (node.className == "android.widget.TextView") {
+                val text = node.text?.toString()
+                if (!text.isNullOrBlank() && text.length < 500) {
+                    latestText = text
+                }
+            }
+
+            for (i in 0 until node.childCount) {
+                node.getChild(i)?.let { queue.add(it) }
+            }
         }
-
-        val args = Bundle().apply {
-            putCharSequence(
-                AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE,
-                message
-            )
-        }
-
-        inputField.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args)
-        sendButton.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-
-        Log.i(TAG, "✅ AUTO-REPLY SENT")
-        showDebugNotification("Reply sent")
-    }
-
-    private fun showDebugNotification(text: String) {
-
-    // ✅ Android 13+ runtime permission check
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        if (checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS)
-            != android.content.pm.PackageManager.PERMISSION_GRANTED
-        ) {
-            Log.w(TAG, "🚫 Notification permission not granted")
-            return
-        }
-    }
-
-    val notification = NotificationCompat.Builder(this, CHANNEL_ID)
-        .setSmallIcon(android.R.drawable.sym_action_chat)
-        .setContentTitle("Jarvis")
-        .setContentText(text)
-        .setPriority(NotificationCompat.PRIORITY_HIGH)
-        .build()
-
-    val manager =
-        getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-    manager.notify(System.currentTimeMillis().toInt(), notification)
-    }
-
-    private fun createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                CHANNEL_ID,
-                "Jarvis Debug",
-                NotificationManager.IMPORTANCE_HIGH
-            )
-            val manager =
-                getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            manager.createNotificationChannel(channel)
-        }
+        return latestText
     }
 
     override fun onInterrupt() {
-        Log.w(TAG, "⚠️ SERVICE INTERRUPTED")
+        Log.w(TAG, "⚠️ Accessibility Interrupted")
     }
 }
