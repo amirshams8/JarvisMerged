@@ -1,16 +1,20 @@
 package com.jarvismini.automation
 
 import android.accessibilityservice.AccessibilityService
-import android.util.Log
 import android.view.accessibility.AccessibilityEvent
+import android.util.Log
 import android.widget.Toast
 
 class AppAutomationService : AccessibilityService() {
 
+    private val TAG = "JARVIS_PROOF"
+    private val TARGET_PACKAGE = "com.whatsapp"
+
     override fun onServiceConnected() {
         super.onServiceConnected()
 
-        Log.e("JARVIS_PROOF", "🔥 SERVICE CONNECTED")
+        Log.e(TAG, "SERVICE CONNECTED")
+
         Toast.makeText(
             this,
             "JARVIS ACCESSIBILITY CONNECTED",
@@ -19,10 +23,21 @@ class AppAutomationService : AccessibilityService() {
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
-        Log.e("JARVIS_PROOF", "EVENT RECEIVED: ${event?.eventType}")
+        if (event == null) return
+
+        val pkg = event.packageName?.toString() ?: return
+        if (pkg != TARGET_PACKAGE) return
+
+        Log.e(TAG, "WHATSAPP EVENT: ${event.eventType}")
+
+        Toast.makeText(
+            this,
+            "WhatsApp event detected",
+            Toast.LENGTH_SHORT
+        ).show()
     }
 
     override fun onInterrupt() {
-        Log.e("JARVIS_PROOF", "SERVICE INTERRUPTED")
+        Log.e(TAG, "SERVICE INTERRUPTED")
     }
 }
