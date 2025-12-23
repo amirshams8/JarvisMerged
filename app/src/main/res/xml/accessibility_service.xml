@@ -1,8 +1,19 @@
 <accessibility-service
     xmlns:android="http://schemas.android.com/apk/res/android"
-    android:accessibilityEventTypes="typeWindowContentChanged"
+
+    android:accessibilityEventTypes="
+        typeWindowStateChanged
+        | typeWindowContentChanged
+        | typeViewTextChanged
+        | typeNotificationStateChanged"
+
     android:accessibilityFeedbackType="feedbackGeneric"
-    android:accessibilityFlags="flagReportViewIds|flagRetrieveInteractiveWindows"
+
+    android:accessibilityFlags="
+        flagReportViewIds
+        | flagRetrieveInteractiveWindows
+        | flagIncludeNotImportantViews"
+
     android:canRetrieveWindowContent="true"
     android:notificationTimeout="50"
-    android:description="@string/service_desc" />
+    android:description="@string/service_desc"/>
