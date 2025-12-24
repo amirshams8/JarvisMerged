@@ -68,7 +68,7 @@ class WhatsAppNotificationListener : NotificationListenerService() {
             ?: return
 
         // 4️⃣ Deduplicate notification
-        if (!handledKeys.add(sbn.key)) return
+        if (handledKeys.putIfAbsent(sbn.key, true) != null) return
 
         // 5️⃣ Identify chat
         val chatId = convo ?: title ?: return
