@@ -1,0 +1,4 @@
+// ===== FILE: app/src/main/res/xml/notification_listener.xml =====
+<notification-listener-service
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:description="@string/service_desc" />
