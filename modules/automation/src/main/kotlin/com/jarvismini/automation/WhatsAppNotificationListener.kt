@@ -3,15 +3,15 @@ package com.jarvismini.automation
 
 import android.app.Notification
 import android.app.PendingIntent
-import android.app.RemoteInput
 import android.content.Intent
 import android.os.Bundle
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.util.Log
-import com.jarvismini.automation.decision.ReplyDecision
+import androidx.core.app.RemoteInput
 import com.jarvismini.automation.input.AutoReplyInput
 import com.jarvismini.automation.orchestrator.AutoReplyOrchestrator
+import com.jarvismini.automation.decision.ReplyDecision
 import java.util.concurrent.ConcurrentHashMap
 
 class WhatsAppNotificationListener : NotificationListenerService() {
@@ -78,7 +78,7 @@ class WhatsAppNotificationListener : NotificationListenerService() {
             lastReplyTime[chatId] = now
         }
 
-        // 🔗 ORCHESTRATOR (MODE-AWARE DECISION)
+        // 🔗 WIRED TO ORCHESTRATOR
         val decision = AutoReplyOrchestrator.handle(
             AutoReplyInput(
                 messageText = messageText,
@@ -87,7 +87,7 @@ class WhatsAppNotificationListener : NotificationListenerService() {
         )
 
         if (decision !is ReplyDecision.AutoReply) {
-            Log.d(TAG, "Mode blocked auto-reply")
+            Log.d(TAG, "Jarvis mode blocks auto-reply")
             return
         }
 
@@ -97,13 +97,15 @@ class WhatsAppNotificationListener : NotificationListenerService() {
     private fun sendReply(action: Notification.Action, replyText: String) {
         val replyIntent = Intent()
         val bundle = Bundle()
+        val inputs = mutableListOf<RemoteInput>()
 
-        for (input in action.remoteInputs) {
-            bundle.putCharSequence(input.resultKey, replyText)
+        for (sysInput in action.remoteInputs) {
+            bundle.putCharSequence(sysInput.resultKey, replyText)
+            inputs += RemoteInput.Builder(sysInput.resultKey).build()
         }
 
         RemoteInput.addResultsToIntent(
-            action.remoteInputs,
+            inputs.toTypedArray(),
             replyIntent,
             bundle
         )
