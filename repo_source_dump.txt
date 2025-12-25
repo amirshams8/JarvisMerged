@@ -463,7 +463,6 @@ class MainActivity : AppCompatActivity() {
 
 
 ===== FILE: app/src/main/res/xml/accessibility_service.xml =====
-// ===== FILE: app/src/main/res/xml/accessibility_service.xml =====
 <accessibility-service
     xmlns:android="http://schemas.android.com/apk/res/android"
 
