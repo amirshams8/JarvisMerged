@@ -1,11 +1,10 @@
+// ===== FILE: app/src/main/res/xml/accessibility_service.xml =====
 <accessibility-service
     xmlns:android="http://schemas.android.com/apk/res/android"
 
     android:accessibilityEventTypes="
         typeWindowStateChanged
-        | typeWindowContentChanged
-        | typeViewTextChanged
-        | typeNotificationStateChanged"
+        | typeWindowContentChanged"
 
     android:accessibilityFeedbackType="feedbackGeneric"
 
@@ -15,5 +14,5 @@
         | flagIncludeNotImportantViews"
 
     android:canRetrieveWindowContent="true"
-    android:notificationTimeout="50"
+    android:notificationTimeout="100"
     android:description="@string/service_desc"/>
