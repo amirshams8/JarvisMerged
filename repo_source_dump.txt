@@ -73,6 +73,19 @@ FILE TREE (SELECTED FOLDERS)
 │   │   │   │   │   │   │   │   │   ├── AutoReplyInput.kt
 │   │   │   │   │   │   │   │   ├── orchestrator
 │   │   │   │   │   │   │   │   │   ├── AutoReplyOrchestrator.kt
+│   ├── callhandler
+│   │   ├── build.gradle.kts
+│   │   ├── src
+│   │   │   ├── main
+│   │   │   │   ├── kotlin
+│   │   │   │   │   ├── com
+│   │   │   │   │   │   ├── jarvismini
+│   │   │   │   │   │   │   ├── callhandler
+│   │   │   │   │   │   │   │   ├── ContactResolver.kt
+│   │   │   │   │   │   │   │   ├── PhaseGuard.kt
+│   │   │   │   │   │   │   │   ├── SmsAutoReplyService.kt
+│   │   │   │   │   │   │   │   ├── SmsReceiver.kt
+│   │   │   │   │   │   │   │   ├── SmsSender.kt
 │   ├── core
 │   │   ├── build.gradle.kts
 │   │   ├── proguard-rules.pro
@@ -223,31 +236,63 @@ dependencies {
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.jarvismini">
 
+    <!-- ================= PERMISSIONS ================= -->
+
+    <!-- SMS Phase-1 -->
+    <uses-permission android:name="android.permission.RECEIVE_SMS" />
+    <uses-permission android:name="android.permission.SEND_SMS" />
+    <uses-permission android:name="android.permission.READ_CONTACTS" />
+
+    <!-- WhatsApp Notification Auto-Reply -->
+    <uses-permission android:name="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE" />
+
+    <!-- Optional but safe -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- ================= APPLICATION ================= -->
+
     <application
+        android:allowBackup="true"
         android:label="@string/app_name"
         android:icon="@android:drawable/sym_def_app_icon"
+        android:supportsRtl="true"
         android:theme="@style/Theme.JarvisMini">
+
+        <!-- ================= UI ================= -->
 
         <activity
             android:name=".MainActivity"
             android:exported="true">
             <intent-filter>
-                <action android:name="android.intent.action.MAIN"/>
-                <category android:name="android.intent.category.LAUNCHER"/>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
 
-        <!-- Notification Listener Service -->
+        <!-- ================= WHATSAPP MODULE ================= -->
+
         <service
             android:name="com.jarvismini.automation.WhatsAppNotificationListener"
             android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
             android:exported="false">
             <intent-filter>
-                <action android:name="android.service.notification.NotificationListenerService"/>
+                <action android:name="android.service.notification.NotificationListenerService" />
             </intent-filter>
         </service>
 
+        <!-- ================= SMS PHASE-1 ================= -->
+
+        <receiver
+            android:name="com.jarvismini.callhandler.SmsReceiver"
+            android:permission="android.permission.BROADCAST_SMS"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.provider.Telephony.SMS_RECEIVED" />
+            </intent-filter>
+        </receiver>
+
     </application>
+
 </manifest>
 
 
@@ -1123,6 +1168,134 @@ object AutoReplyOrchestrator {
 
     fun init() {
         // reserved for future signal wiring
+    }
+}
+
+
+===== FILE: modules/callhandler/build.gradle.kts =====
+plugins {
+    id("com.android.library")
+    id("org.jetbrains.kotlin.android")
+}
+
+android {
+    namespace = "com.jarvismini.callhandler"
+    compileSdk = 34
+
+    defaultConfig {
+        minSdk = 26
+    }
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = "17"
+    }
+}
+
+dependencies {
+    implementation("androidx.core:core-ktx:1.12.0")
+}
+
+
+===== FILE: modules/callhandler/src/main/kotlin/com/jarvismini/callhandler/ContactResolver.kt =====
+package com.jarvismini.callhandler
+
+import android.content.Context
+import android.provider.ContactsContract
+
+object ContactResolver {
+
+    fun isContact(context: Context, number: String): Boolean {
+        val uri = ContactsContract.PhoneLookup.CONTENT_FILTER_URI
+            .buildUpon()
+            .appendPath(number)
+            .build()
+
+        context.contentResolver.query(
+            uri,
+            arrayOf(ContactsContract.PhoneLookup._ID),
+            null,
+            null,
+            null
+        )?.use { cursor ->
+            return cursor.moveToFirst()
+        }
+
+        return false
+    }
+}
+
+
+===== FILE: modules/callhandler/src/main/kotlin/com/jarvismini/callhandler/PhaseGuard.kt =====
+package com.jarvismini.callhandler
+
+object PhaseGuard {
+    const val PHASE = 1
+}
+
+
+===== FILE: modules/callhandler/src/main/kotlin/com/jarvismini/callhandler/SmsAutoReplyService.kt =====
+package com.jarvismini.callhandler
+
+import android.content.Context
+import android.util.Log
+
+object SmsAutoReplyService {
+
+    private const val AUTO_REPLY =
+        "Hello Aamir sir, Jarvis here. I’ll get back to you shortly."
+
+    fun reply(context: Context, number: String, incomingText: String) {
+        SmsSender.send(context, number, AUTO_REPLY)
+        Log.d("CALL-HANDLER", "Auto-reply sent to $number")
+    }
+}
+
+
+===== FILE: modules/callhandler/src/main/kotlin/com/jarvismini/callhandler/SmsReceiver.kt =====
+package com.jarvismini.callhandler
+
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.provider.Telephony
+import android.util.Log
+
+class SmsReceiver : BroadcastReceiver() {
+
+    override fun onReceive(context: Context, intent: Intent) {
+        if (intent.action != Telephony.Sms.Intents.SMS_RECEIVED_ACTION) return
+
+        val messages = Telephony.Sms.Intents.getMessagesFromIntent(intent)
+        for (msg in messages) {
+            val sender = msg.displayOriginatingAddress ?: return
+            val text = msg.messageBody ?: return
+
+            if (!ContactResolver.isContact(context, sender)) {
+                Log.d("CALL-HANDLER", "SMS ignored (not contact)")
+                return
+            }
+
+            SmsAutoReplyService.reply(context, sender, text)
+        }
+    }
+}
+
+
+===== FILE: modules/callhandler/src/main/kotlin/com/jarvismini/callhandler/SmsSender.kt =====
+package com.jarvismini.callhandler
+
+import android.telephony.SmsManager
+
+object SmsSender {
+
+    fun send(context: android.content.Context, number: String, text: String) {
+        val manager = SmsManager.getDefault()
+        manager.sendTextMessage(number, null, text, null, null)
     }
 }
 
