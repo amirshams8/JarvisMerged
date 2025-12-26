@@ -39,4 +39,5 @@ dependencies {
     implementation(project(":modules:engine"))
     implementation(project(":modules:smart"))
     implementation(project(":modules:ui"))
+    implementation(project(":modules:callhandler"))
 }
