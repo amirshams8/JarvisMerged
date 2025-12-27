@@ -39,6 +39,7 @@ FILE TREE (SELECTED FOLDERS)
 │   │   │   │   │   ├── ic_launcher.jrjrjrpng
 │   │   │   │   │   ├── ic_launcher.png
 │   │   │   │   ├── mipmap-xxhdpi
+│   │   │   │   │   ├── ic_launcher.png
 │   │   │   │   │   ├── ic_launcherejjeje.png
 │   │   │   │   ├── mipmap-xxxhdpi
 │   │   │   │   │   ├── ic_launcherrjdjej.png
