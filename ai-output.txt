@@ -1,65 +1,88 @@
-// ===== FILE: modules/callhandler/src/main/kotlin/com/jarvismini/callhandler/service/CallAutoReplyService.kt=====
-package com.jarvismini.callhandler.service
+===== FILE: modules/callhandler/src/main/kotlin/com/jarvismini/callhandler/accessibility/CallAccessibilityService.kt =====
 
-import android.app.Notification
-import android.app.NotificationChannel
-import android.app.NotificationManager
-import android.app.Service
+package com.jarvismini.callhandler.accessibility
+
+import android.accessibilityservice.AccessibilityService
+import android.view.accessibility.AccessibilityEvent
 import android.content.Intent
-import android.os.Build
-import android.os.IBinder
-import android.telephony.SmsManager
-import androidx.core.app.NotificationCompat
 import android.util.Log
+import com.jarvismini.callhandler.service.CallAutoReplyService
+import com.jarvismini.automation.orchestrator.AutoReplyOrchestrator
+import com.jarvismini.automation.input.AutoReplyInput
+import com.jarvismini.automation.decision.ReplyDecision
+import com.jarvismini.core.JarvisMode
+import com.jarvismini.core.JarvisState
 
-class CallAutoReplyService : Service() {
+class CallAccessibilityService : AccessibilityService() {
 
-    override fun onCreate() {
-        super.onCreate()
-        startForeground(NOTIFICATION_ID, createNotification())
-    }
+    override fun onAccessibilityEvent(event: AccessibilityEvent?) {
+        if (event == null) return
 
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        val number = intent?.getStringExtra(EXTRA_NUMBER)
-        val message = intent?.getStringExtra(EXTRA_MESSAGE)
+        if (
+            event.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED &&
+            event.eventType != AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED
+        ) return
 
-        if (!number.isNullOrBlank() && !message.isNullOrBlank()) {
-            Log.d(TAG, "Foreground SMS → $number")
-            SmsManager.getDefault()
-                .sendTextMessage(number, null, message, null, null)
+        val text = event.text?.joinToString(" ") ?: return
+
+        if (
+            !text.contains("incoming", ignoreCase = true) &&
+            !text.contains("calling", ignoreCase = true)
+        ) return
+
+        Log.d("CALL-A11Y", "Call UI detected: $text")
+
+        if (JarvisState.currentMode == JarvisMode.NORMAL) {
+            Log.d("CALL-A11Y", "Jarvis NORMAL → ignore")
+            return
         }
 
-        stopSelf()
-        return START_NOT_STICKY
-    }
+        val number = extractPhoneNumber(text)
+        if (number.isNullOrBlank()) {
+            Log.d("CALL-A11Y", "No number detected")
+            return
+        }
 
-    override fun onBind(intent: Intent?): IBinder? = null
-
-    private fun createNotification(): Notification {
-        val channelId = CHANNEL_ID
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                channelId,
-                "Jarvis Call Auto‑Reply",
-                NotificationManager.IMPORTANCE_LOW
+        val decision = AutoReplyOrchestrator.handle(
+            AutoReplyInput(
+                messageText = "Incoming call",
+                isFromOwner = false
             )
-            getSystemService(NotificationManager::class.java)
-                .createNotificationChannel(channel)
+        )
+
+        if (decision !is ReplyDecision.AutoReply) {
+            Log.d("CALL-A11Y", "No auto-reply decision")
+            return
         }
 
-        return NotificationCompat.Builder(this, channelId)
-            .setContentTitle("Jarvis")
-            .setContentText("Sending call auto‑reply")
-            .setSmallIcon(android.R.drawable.sym_action_chat)
-            .build()
+        val intent = Intent(
+            applicationContext,
+            CallAutoReplyService::class.java
+        ).apply {
+            putExtra(CallAutoReplyService.EXTRA_NUMBER, number)
+            putExtra(CallAutoReplyService.EXTRA_MESSAGE, decision.message)
+        }
+
+        startForegroundService(intent)
     }
 
-    companion object {
-        const val EXTRA_NUMBER = "extra_number"
-        const val EXTRA_MESSAGE = "extra_message"
-        const val CHANNEL_ID = "jarvis_call_reply"
-        const val NOTIFICATION_ID = 1002
-        private const val TAG = "CALL-AUTO-REPLY"
+    override fun onInterrupt() {
+        // no-op
+    }
+
+    private fun extractPhoneNumber(text: String): String? {
+        val regex = Regex("(\\+?\\d{10,13})")
+        return regex.find(text)?.value
     }
 }
+===== FILE: app/src/main/res/xml/call_accessibility_config.xml =====
+
+<accessibility-service
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:accessibilityEventTypes="typeWindowStateChanged|typeWindowContentChanged"
+    android:accessibilityFeedbackType="feedbackGeneric"
+    android:notificationTimeout="100"
+    android:canRetrieveWindowContent="true"
+    android:accessibilityFlags="flagReportViewIds"
+    android:description="@string/accessibility_call_desc" />
+    
