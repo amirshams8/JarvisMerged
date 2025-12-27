@@ -44,11 +44,12 @@ object CallHandlerEngine {
 
         // 🧠 Orchestrator decision
         val decision = AutoReplyOrchestrator.handle(
-            AutoReplyInput(
-                content = "Incoming call",
-                isGroup = false
-            )
-        )
+    AutoReplyInput(
+        messageText = "Incoming call",
+        isFromOwner = false
+    )
+)
+
 
         if (decision is ReplyDecision.AutoReply) {
             sendSms(number, decision.message)
