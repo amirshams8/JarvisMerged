@@ -101,6 +101,8 @@ FILE TREE (SELECTED FOLDERS)
 │   │   │   │   ├── res
 │   │   │   │   │   ├── mipmap-mdpi
 │   │   │   │   │   │   ├── ic_launcher.png
+│   │   │   │   │   ├── values
+│   │   │   │   │   │   ├── strings.xml
 │   ├── core
 │   │   ├── build.gradle.kts
 │   │   ├── proguard-rules.pro
@@ -1636,7 +1638,6 @@ class CallReceiver : BroadcastReceiver() {
 ===== FILE: modules/callhandler/src/main/kotlin/com/jarvismini/callhandler/service/CallAutoReplyService.kt =====
 package com.jarvismini.callhandler.service
 
-import com.jarvismini.callhandler.R
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -1658,7 +1659,7 @@ class CallAutoReplyService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         Log.e(TAG, "Service STARTED with intent=$intent")
 
-        // 🔴 START FOREGROUND HERE (NOT in onCreate)
+        // ✅ Start foreground service immediately
         startForeground(NOTIFICATION_ID, createNotification())
 
         val number = intent?.getStringExtra(EXTRA_NUMBER)
@@ -1694,7 +1695,7 @@ class CallAutoReplyService : Service() {
         return NotificationCompat.Builder(this, channelId)
             .setContentTitle("Jarvis")
             .setContentText("Sending call auto‑reply SMS")
-            .setSmallIcon(com.jarvismini.R.mipmap.ic_launcher) // SAFE ICON
+            .setSmallIcon(android.R.drawable.stat_notify_chat) // ✅ SYSTEM ICON
             .setOngoing(true)
             .build()
     }
@@ -1707,6 +1708,13 @@ class CallAutoReplyService : Service() {
         private const val TAG = "CALL-FGS"
     }
 }
+
+
+===== FILE: modules/callhandler/src/main/res/values/strings.xml =====
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="callhandler_dummy">dummy</string>
+</resources>
 
 
 ===== FILE: modules/core/build.gradle.kts =====
