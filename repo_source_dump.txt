@@ -20,10 +20,6 @@ FILE TREE (SELECTED FOLDERS)
 │   │   │   │   │   │   ├── DebugBuildConfig.kt
 │   │   ├── main
 │   │   │   ├── AndroidManifest.xml
-│   │   │   ├── java
-│   │   │   │   ├── com
-│   │   │   │   │   ├── jarvismini
-│   │   │   │   │   │   ├── MainActivity.kt
 │   │   │   ├── kotlin
 │   │   │   │   ├── com
 │   │   │   │   │   ├── jarvismini
@@ -100,6 +96,7 @@ FILE TREE (SELECTED FOLDERS)
 │   │   │   │   │   │   ├── jarvismini
 │   │   │   │   │   │   │   ├── callhandler
 │   │   │   │   │   │   │   │   ├── ContactResolver.kt
+│   │   │   │   │   │   │   │   ├── JarvisCallScreeningService.kt
 │   │   │   │   │   │   │   │   ├── PhaseGuard.kt
 │   │   │   │   │   │   │   │   ├── SmsAutoReplyService.kt
 │   │   │   │   │   │   │   │   ├── SmsReceiver.kt
@@ -292,7 +289,33 @@ dependencies {
 </manifest>
 
 
-===== FILE: app/src/main/java/com/jarvismini/MainActivity.kt =====
+===== FILE: app/src/main/kotlin/com/jarvismini/BuildConfigBridge.kt =====
+package com.jarvismini
+
+object BuildConfigBridge {
+    const val IS_DEBUG = true
+}
+
+
+===== FILE: app/src/main/kotlin/com/jarvismini/CoreApp.kt =====
+package com.jarvismini
+
+import android.app.Application
+import com.jarvismini.automation.orchestrator.AutoReplyOrchestrator
+import com.jarvismini.core.JarvisState
+
+class CoreApp : Application() {
+
+    override fun onCreate() {
+        super.onCreate()
+
+        JarvisState.init(this)
+        AutoReplyOrchestrator.init()
+    }
+}
+
+
+===== FILE: app/src/main/kotlin/com/jarvismini/MainActivity.kt =====
 package com.jarvismini
 
 import android.app.role.RoleManager
@@ -399,206 +422,6 @@ class MainActivity : AppCompatActivity() {
 
         if (perms.isNotEmpty()) {
             ActivityCompat.requestPermissions(this, perms.toTypedArray(), PERM_REQ)
-        }
-    }
-}
-
-
-===== FILE: app/src/main/kotlin/com/jarvismini/BuildConfigBridge.kt =====
-package com.jarvismini
-
-object BuildConfigBridge {
-    const val IS_DEBUG = true
-}
-
-
-===== FILE: app/src/main/kotlin/com/jarvismini/CoreApp.kt =====
-package com.jarvismini
-
-import android.app.Application
-import com.jarvismini.automation.orchestrator.AutoReplyOrchestrator
-import com.jarvismini.core.JarvisState
-
-class CoreApp : Application() {
-
-    override fun onCreate() {
-        super.onCreate()
-
-        JarvisState.init(this)
-        AutoReplyOrchestrator.init()
-    }
-}
-
-
-===== FILE: app/src/main/kotlin/com/jarvismini/MainActivity.kt =====
-package com.jarvismini
-
-import android.content.pm.PackageManager
-import android.os.Build
-import android.os.Bundle
-import android.view.View
-import android.widget.*
-import androidx.appcompat.app.AppCompatActivity
-import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
-import com.jarvismini.automation.decision.ReplyDecision
-import com.jarvismini.automation.input.AutoReplyInput
-import com.jarvismini.automation.orchestrator.AutoReplyOrchestrator
-import com.jarvismini.core.JarvisMode
-import com.jarvismini.core.JarvisState
-
-class MainActivity : AppCompatActivity() {
-
-    private lateinit var statusText: TextView
-    private lateinit var actionButton: Button
-    private lateinit var modeSpinner: Spinner
-
-    companion object {
-        private const val PERMISSION_REQ_CODE = 2001
-    }
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-
-        // ✅ Phase-2: restore persistent Jarvis state
-        JarvisState.init(this)
-
-        requestRequiredPermissions()
-
-        // ================= STATUS =================
-        statusText = TextView(this).apply {
-            textSize = 16f
-            text = "Current mode: ${JarvisState.currentMode}"
-            setPadding(24, 24, 24, 24)
-        }
-
-        // ================= MODE SELECTOR =================
-        modeSpinner = Spinner(this)
-
-        val modes = JarvisMode.values().map { it.name }
-
-        val adapter = ArrayAdapter(
-            this,
-            android.R.layout.simple_spinner_item,
-            modes
-        )
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        modeSpinner.adapter = adapter
-
-        modeSpinner.onItemSelectedListener =
-            object : AdapterView.OnItemSelectedListener {
-                override fun onItemSelected(
-                    parent: AdapterView<*>,
-                    view: View?,
-                    position: Int,
-                    id: Long
-                ) {
-                    val selectedMode = JarvisMode.valueOf(modes[position])
-                    JarvisState.setMode(this@MainActivity, selectedMode)
-                    statusText.text = "Current mode: $selectedMode"
-                }
-
-                override fun onNothingSelected(parent: AdapterView<*>) {}
-            }
-
-        modeSpinner.setSelection(
-            JarvisMode.values().indexOf(JarvisState.currentMode)
-        )
-
-        // ================= PHASE-2 ACTION BUTTON =================
-        actionButton = Button(this).apply {
-            text = "Run Automation Now"
-            setOnClickListener { runAutomationNow() }
-        }
-
-        // ================= LAYOUT =================
-        val layout = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            addView(statusText)
-            addView(modeSpinner)
-            addView(actionButton)
-        }
-
-        setContentView(layout)
-    }
-
-    // ================= REAL AUTOMATION TRIGGER =================
-    private fun runAutomationNow() {
-        val input = AutoReplyInput(
-            messageText = "Manual automation trigger",
-            isFromOwner = false
-        )
-
-        val decision = AutoReplyOrchestrator.handle(input)
-
-        statusText.text = when (decision) {
-            is ReplyDecision.AutoReply ->
-                "Automation executed → ${decision.message}"
-            ReplyDecision.NoReply ->
-                "Automation blocked by mode: ${JarvisState.currentMode}"
-        }
-    }
-
-    // ================= PERMISSIONS =================
-    private fun requestRequiredPermissions() {
-        val permissions = mutableListOf<String>()
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (ContextCompat.checkSelfPermission(
-                    this,
-                    android.Manifest.permission.POST_NOTIFICATIONS
-                ) != PackageManager.PERMISSION_GRANTED
-            ) {
-                permissions += android.Manifest.permission.POST_NOTIFICATIONS
-            }
-        }
-
-        if (ContextCompat.checkSelfPermission(
-                this,
-                android.Manifest.permission.RECEIVE_SMS
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            permissions += android.Manifest.permission.RECEIVE_SMS
-        }
-
-        if (ContextCompat.checkSelfPermission(
-                this,
-                android.Manifest.permission.SEND_SMS
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            permissions += android.Manifest.permission.SEND_SMS
-        }
-
-        if (ContextCompat.checkSelfPermission(
-                this,
-                android.Manifest.permission.READ_CONTACTS
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            permissions += android.Manifest.permission.READ_CONTACTS
-        }
-
-        if (permissions.isNotEmpty()) {
-            ActivityCompat.requestPermissions(
-                this,
-                permissions.toTypedArray(),
-                PERMISSION_REQ_CODE
-            )
-        }
-    }
-
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray
-    ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-
-        if (requestCode == PERMISSION_REQ_CODE) {
-            Toast.makeText(
-                this,
-                "Permissions processed",
-                Toast.LENGTH_SHORT
-            ).show()
         }
     }
 }
@@ -1619,6 +1442,80 @@ object ContactResolver {
         }
 
         return false
+    }
+}
+
+
+===== FILE: modules/callhandler/src/main/kotlin/com/jarvismini/callhandler/JarvisCallScreeningService.kt =====
+package com.jarvismini.callhandler
+
+import android.net.Uri
+import android.provider.ContactsContract
+import android.telecom.Call
+import android.telecom.CallScreeningService
+import android.telephony.SmsManager
+import android.util.Log
+import com.jarvismini.automation.decision.ReplyDecision
+import com.jarvismini.automation.input.AutoReplyInput
+import com.jarvismini.automation.orchestrator.AutoReplyOrchestrator
+import com.jarvismini.core.JarvisMode
+import com.jarvismini.core.JarvisState
+
+class JarvisCallScreeningService : CallScreeningService() {
+
+    override fun onScreenCall(details: Call.Details) {
+        val number = details.handle?.schemeSpecificPart ?: return
+
+        // Jarvis OFF → do nothing
+        if (JarvisState.currentMode == JarvisMode.NORMAL) {
+            allow()
+            return
+        }
+
+        // Contacts only
+        if (!isContact(number)) {
+            allow()
+            return
+        }
+
+        val decision = AutoReplyOrchestrator.handle(
+            AutoReplyInput("Incoming call", false)
+        )
+
+        if (decision is ReplyDecision.AutoReply) {
+            SmsManager.getDefault()
+                .sendTextMessage(number, null, decision.message, null, null)
+
+            reject()
+        } else {
+            allow()
+        }
+    }
+
+    private fun allow() {
+        respondToCall(CallResponse.Builder().build())
+    }
+
+    private fun reject() {
+        respondToCall(
+            CallResponse.Builder()
+                .setDisallowCall(true)
+                .setRejectCall(true)
+                .setSkipNotification(true)
+                .setSkipCallLog(true)
+                .build()
+        )
+    }
+
+    private fun isContact(number: String): Boolean {
+        val uri = Uri.withAppendedPath(
+            ContactsContract.PhoneLookup.CONTENT_FILTER_URI,
+            Uri.encode(number)
+        )
+
+        contentResolver.query(uri, null, null, null, null).use {
+            return it?.moveToFirst() == true
+        }
     }
 }
 
