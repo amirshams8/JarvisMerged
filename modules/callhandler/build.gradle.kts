@@ -24,6 +24,5 @@ android {
 dependencies {
     implementation(project(":modules:automation"))
     implementation(project(":modules:core"))
-    implementation(project(":app"))
     implementation("androidx.core:core-ktx:1.12.0")
 }
