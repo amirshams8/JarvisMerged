@@ -1594,54 +1594,49 @@ class CallAccessibilityService : AccessibilityService() {
 
 
 ===== FILE: modules/callhandler/src/main/kotlin/com/jarvismini/callhandler/logic/CallHandlerEngine.kt =====
-package com.jarvismini.callhandler.logic
+package com.jarvismini.callhandler.accessibility
 
-import android.content.Context
+import android.accessibilityservice.AccessibilityService
+import android.view.accessibility.AccessibilityEvent
 import android.content.Intent
-import android.net.Uri
-import android.provider.ContactsContract
 import android.util.Log
-import com.jarvismini.automation.decision.ReplyDecision
-import com.jarvismini.automation.input.AutoReplyInput
+import com.jarvismini.service.CallAutoReplyService   // ✅ FIXED IMPORT
 import com.jarvismini.automation.orchestrator.AutoReplyOrchestrator
+import com.jarvismini.automation.input.AutoReplyInput
+import com.jarvismini.automation.decision.ReplyDecision
 import com.jarvismini.core.JarvisMode
 import com.jarvismini.core.JarvisState
-import com.jarvismini.service.CallAutoReplyService
-import java.util.concurrent.ConcurrentHashMap
 
-object CallHandlerEngine {
+class CallAccessibilityService : AccessibilityService() {
 
-    private const val TAG = "CALL-HANDLER"
-    private const val COOLDOWN_MS = 60_000L
+    override fun onAccessibilityEvent(event: AccessibilityEvent?) {
+        if (event == null) return
 
-    private val lastHandled = ConcurrentHashMap<String, Long>()
+        if (
+            event.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED &&
+            event.eventType != AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED
+        ) return
 
-    fun handleIncomingCall(context: Context, number: String) {
-        val now = System.currentTimeMillis()
+        val text = event.text?.joinToString(" ") ?: return
 
-        Log.d(TAG, "Incoming call from $number")
+        if (
+            !text.contains("incoming", ignoreCase = true) &&
+            !text.contains("calling", ignoreCase = true)
+        ) return
 
-        // 🔕 Jarvis OFF
+        Log.d("CALL-A11Y", "Call UI detected: $text")
+
         if (JarvisState.currentMode == JarvisMode.NORMAL) {
-            Log.d(TAG, "Jarvis NORMAL → ignoring call")
+            Log.d("CALL-A11Y", "Jarvis NORMAL → ignore")
             return
         }
 
-        // 🔒 Contacts only
-        if (!isSavedContact(context, number)) {
-            Log.d(TAG, "Number not in contacts → ignored")
+        val number = extractPhoneNumber(text)
+        if (number.isNullOrBlank()) {
+            Log.d("CALL-A11Y", "No number detected")
             return
         }
 
-        // 🔁 Cooldown
-        val last = lastHandled[number] ?: 0L
-        if (now - last < COOLDOWN_MS) {
-            Log.d(TAG, "Cooldown active → ignored")
-            return
-        }
-        lastHandled[number] = now
-
-        // 🧠 Decision
         val decision = AutoReplyOrchestrator.handle(
             AutoReplyInput(
                 messageText = "Incoming call",
@@ -1650,39 +1645,29 @@ object CallHandlerEngine {
         )
 
         if (decision !is ReplyDecision.AutoReply) {
-            Log.d(TAG, "No auto-reply decision")
+            Log.d("CALL-A11Y", "No auto-reply decision")
             return
         }
 
-        Log.d(TAG, "Auto-reply decided → starting Foreground Service")
-
         val intent = Intent(
-            context.applicationContext,
+            applicationContext,
             CallAutoReplyService::class.java
         ).apply {
             putExtra(CallAutoReplyService.EXTRA_NUMBER, number)
             putExtra(CallAutoReplyService.EXTRA_MESSAGE, decision.message)
         }
 
-        // ✅ Android 8+ required
-        context.applicationContext.startForegroundService(intent)
+        // ✅ REQUIRED for FGS
+        applicationContext.startForegroundService(intent)
     }
 
-    private fun isSavedContact(context: Context, number: String): Boolean {
-        val uri = ContactsContract.PhoneLookup.CONTENT_FILTER_URI
-            .buildUpon()
-            .appendPath(Uri.encode(number))
-            .build()
+    override fun onInterrupt() {
+        // no-op
+    }
 
-        val cursor = context.contentResolver.query(
-            uri,
-            arrayOf(ContactsContract.PhoneLookup._ID),
-            null,
-            null,
-            null
-        )
-
-        return cursor?.use { it.moveToFirst() } == true
+    private fun extractPhoneNumber(text: String): String? {
+        val regex = Regex("(\\+?\\d{10,13})")
+        return regex.find(text)?.value
     }
 }
 
