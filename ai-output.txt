@@ -1,4 +1,4 @@
-// ===== FILE: modules/core/src/main/java/com/jarvismini/core/JarvisState.kt =====
+// ===== FILE: modules/core/src/main/kotlin/com/jarvismini/core/JarvisState.kt =====
 package com.jarvismini.core
 
 import android.content.Context
@@ -41,7 +41,7 @@ class CoreApp : Application() {
         AutoReplyOrchestrator.init()
     }
 }
-// ===== FILE: app/src/main/java/com/jarvismini/MainActivity.kt =====
+// ===== FILE: app/src/main/kotlin/com/jarvismini/MainActivity.kt =====
 package com.jarvismini
 
 import android.app.role.RoleManager
@@ -151,7 +151,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 }
-// ===== FILE: modules/callhandler/src/main/java/com/jarvismini/callhandler/JarvisCallScreeningService.kt =====
+// ===== FILE: modules/callhandler/src/main/kotlin/com/jarvismini/callhandler/JarvisCallScreeningService.kt =====
 package com.jarvismini.callhandler
 
 import android.net.Uri
