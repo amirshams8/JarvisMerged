@@ -1,2 +1,2 @@
-===== FILE: modules/callhandler/src/main/res/mipmap-mdpi/ic_launchhher.png =====
+//===== FILE: modules/callhandler/src/main/res/mipmap-mdpi/ic_launchhher.png =====
 (binary PNG file – uploaded via GitHub, NOT text)
