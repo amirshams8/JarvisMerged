@@ -326,7 +326,7 @@ dependencies {
 
         <!-- Foreground Service -->
 <service
-    android:name="com.jarvismini.service.CallAutoReplyService"
+    android:name=".service.CallAutoReplyService"
     android:exported="false"
     android:foregroundServiceType="phoneCall">
 
