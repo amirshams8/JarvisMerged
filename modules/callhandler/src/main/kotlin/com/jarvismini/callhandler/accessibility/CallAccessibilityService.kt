@@ -3,8 +3,9 @@ package com.jarvismini.callhandler.accessibility
 import android.accessibilityservice.AccessibilityService
 import android.view.accessibility.AccessibilityEvent
 import android.content.Intent
+import android.os.Build
 import android.util.Log
-import com.jarvismini.callhandler.service.CallAutoReplyService
+import com.jarvismini.service.CallAutoReplyService   // ✅ FIXED IMPORT (APP MODULE)
 import com.jarvismini.automation.orchestrator.AutoReplyOrchestrator
 import com.jarvismini.automation.input.AutoReplyInput
 import com.jarvismini.automation.decision.ReplyDecision
@@ -30,6 +31,7 @@ class CallAccessibilityService : AccessibilityService() {
 
         Log.d("CALL-A11Y", "Call UI detected: $text")
 
+        // 🔕 Jarvis OFF
         if (JarvisState.currentMode == JarvisMode.NORMAL) {
             Log.d("CALL-A11Y", "Jarvis NORMAL → ignore")
             return
@@ -61,7 +63,12 @@ class CallAccessibilityService : AccessibilityService() {
             putExtra(CallAutoReplyService.EXTRA_MESSAGE, decision.message)
         }
 
-        startForegroundService(intent)
+        // ✅ ANDROID O+ SAFE FOREGROUND START
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            applicationContext.startForegroundService(intent)
+        } else {
+            applicationContext.startService(intent)
+        }
     }
 
     override fun onInterrupt() {
