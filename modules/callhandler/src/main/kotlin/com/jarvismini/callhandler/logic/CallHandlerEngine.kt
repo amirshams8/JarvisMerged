@@ -1,4 +1,3 @@
-===== FILE: modules/callhandler/src/main/kotlin/com/jarvismini/callhandler/logic/CallHandlerEngine.kt =====
 package com.jarvismini.callhandler.logic
 
 import android.content.Context
@@ -11,7 +10,7 @@ import com.jarvismini.automation.input.AutoReplyInput
 import com.jarvismini.automation.orchestrator.AutoReplyOrchestrator
 import com.jarvismini.core.JarvisMode
 import com.jarvismini.core.JarvisState
-import com.jarvismini.service.CallAutoReplyService   // ✅ APP MODULE SERVICE
+import com.jarvismini.service.CallAutoReplyService
 import java.util.concurrent.ConcurrentHashMap
 
 object CallHandlerEngine {
@@ -55,11 +54,11 @@ object CallHandlerEngine {
         )
 
         if (decision !is ReplyDecision.AutoReply) {
-            Log.d(TAG, "No auto‑reply decision")
+            Log.d(TAG, "No auto-reply decision")
             return
         }
 
-        Log.d(TAG, "Auto‑reply decided → starting FGS")
+        Log.d(TAG, "Auto-reply decided → starting Foreground Service")
 
         val intent = Intent(
             context.applicationContext,
@@ -69,7 +68,7 @@ object CallHandlerEngine {
             putExtra(CallAutoReplyService.EXTRA_MESSAGE, decision.message)
         }
 
-        // ✅ REQUIRED (Android 8+ / Android 15 safe)
+        // ✅ Android 8+ required
         context.applicationContext.startForegroundService(intent)
     }
 
