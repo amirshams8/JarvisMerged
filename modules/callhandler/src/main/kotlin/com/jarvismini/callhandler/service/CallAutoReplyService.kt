@@ -57,7 +57,7 @@ class CallAutoReplyService : Service() {
         return NotificationCompat.Builder(this, channelId)
             .setContentTitle("Jarvis")
             .setContentText("Sending call auto‑reply SMS")
-            .setSmallIcon(R.mipmap.ic_launcher) // SAFE ICON
+            .setSmallIcon(com.jarvismini.R.mipmap.ic_launcher) // SAFE ICON
             .setOngoing(true)
             .build()
     }
