@@ -66,7 +66,8 @@ object CallHandlerEngine {
         )
     }
 
-    context.startForegroundService(serviceIntent)
+    context.applicationContext.startForegroundService(serviceIntent)
+
         }
     }
 
