@@ -28,12 +28,15 @@ class JarvisCallScreeningService : CallScreeningService() {
         val number = handle.schemeSpecificPart ?: return
         val now = System.currentTimeMillis()
 
-        // Always respond (Android requirement)
+        // Helper: allow call
         fun allowCall() {
-            respondToCall(CallResponse.Builder().build())
+            respondToCall(
+                callDetails,
+                CallResponse.Builder().build()
+            )
         }
 
-        // 🧠 NORMAL MODE → do nothing
+        // 🧠 NORMAL MODE → allow
         if (JarvisState.currentMode == JarvisMode.NORMAL) {
             allowCall()
             return
@@ -71,6 +74,7 @@ class JarvisCallScreeningService : CallScreeningService() {
 
         // 🔕 SILENCE + REJECT
         respondToCall(
+            callDetails,
             CallResponse.Builder()
                 .setDisallowCall(true)
                 .setRejectCall(true)
@@ -79,7 +83,7 @@ class JarvisCallScreeningService : CallScreeningService() {
                 .build()
         )
 
-        Log.d(TAG, "Call silenced + SMS sent ($number)")
+        Log.d(TAG, "Call silenced + SMS sent to $number")
     }
 
     private fun isSavedContact(number: String): Boolean {
