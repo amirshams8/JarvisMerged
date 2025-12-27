@@ -1,6 +1,7 @@
 package com.jarvismini.callhandler.logic
 
 import android.content.Context
+import android.net.Uri
 import android.provider.ContactsContract
 import android.telephony.SmsManager
 import android.util.Log
@@ -44,8 +45,8 @@ object CallHandlerEngine {
         // 🧠 Orchestrator decision
         val decision = AutoReplyOrchestrator.handle(
             AutoReplyInput(
-                messageText = "Incoming call",
-                isFromOwner = false
+                content = "Incoming call",
+                isGroup = false
             )
         )
 
@@ -56,24 +57,24 @@ object CallHandlerEngine {
     }
 
     private fun isSavedContact(context: Context, number: String): Boolean {
-    val uri = ContactsContract.PhoneLookup.CONTENT_FILTER_URI
-        .buildUpon()
-        .appendPath(Uri.encode(number))
-        .build()
+        val uri = ContactsContract.PhoneLookup.CONTENT_FILTER_URI
+            .buildUpon()
+            .appendPath(Uri.encode(number))
+            .build()
 
-    val cursor = context.contentResolver.query(
-        uri,
-        arrayOf(ContactsContract.PhoneLookup._ID),
-        null,
-        null,
-        null
-    )
+        val cursor = context.contentResolver.query(
+            uri,
+            arrayOf(ContactsContract.PhoneLookup._ID),
+            null,
+            null,
+            null
+        )
 
-    return cursor?.use { it.moveToFirst() } == true
-}
-
+        return cursor?.use { it.moveToFirst() } == true
+    }
 
     private fun sendSms(number: String, message: String) {
-        SmsManager.getDefault().sendTextMessage(number, null, message, null, null)
+        SmsManager.getDefault()
+            .sendTextMessage(number, null, message, null, null)
     }
 }
