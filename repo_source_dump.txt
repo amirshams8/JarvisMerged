@@ -30,6 +30,16 @@ FILE TREE (SELECTED FOLDERS)
 │   │   │   │   ├── layout
 │   │   │   │   │   ├── activity_main.xml
 │   │   │   │   │   ├── activity_settings.xml
+│   │   │   │   ├── mipmap-hdpi
+│   │   │   │   │   ├── ic_launcher.pnjejeg
+│   │   │   │   ├── mipmap-mdpi
+│   │   │   │   │   ├── ic_launcher.png
+│   │   │   │   ├── mipmap-xhdpi
+│   │   │   │   │   ├── ic_launcher.png
+│   │   │   │   ├── mipmap-xxhdpi
+│   │   │   │   │   ├── ic_launcher.png
+│   │   │   │   ├── mipmap-xxxhdpi
+│   │   │   │   │   ├── ic_launcher.png
 │   │   │   │   ├── values
 │   │   │   │   │   ├── colors.xml
 │   │   │   │   │   ├── strings.xml
