@@ -20,6 +20,10 @@ FILE TREE (SELECTED FOLDERS)
 │   │   │   │   │   │   ├── DebugBuildConfig.kt
 │   │   ├── main
 │   │   │   ├── AndroidManifest.xml
+│   │   │   ├── java
+│   │   │   │   ├── com
+│   │   │   │   │   ├── jarvismini
+│   │   │   │   │   │   ├── MainActivity.kt
 │   │   │   ├── kotlin
 │   │   │   │   ├── com
 │   │   │   │   │   ├── jarvismini
@@ -106,6 +110,11 @@ FILE TREE (SELECTED FOLDERS)
 │   │   ├── src
 │   │   │   ├── main
 │   │   │   │   ├── AndroidManifest.xml
+│   │   │   │   ├── java
+│   │   │   │   │   ├── com
+│   │   │   │   │   │   ├── jarvismini
+│   │   │   │   │   │   │   ├── core
+│   │   │   │   │   │   │   │   ├── JarvisState.kt
 │   │   │   │   ├── kotlin
 │   │   │   │   │   ├── com
 │   │   │   │   │   │   ├── jarvismini
@@ -283,6 +292,118 @@ dependencies {
 </manifest>
 
 
+===== FILE: app/src/main/java/com/jarvismini/MainActivity.kt =====
+package com.jarvismini
+
+import android.app.role.RoleManager
+import android.content.pm.PackageManager
+import android.os.Build
+import android.os.Bundle
+import android.view.View
+import android.widget.*
+import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
+import com.jarvismini.core.JarvisMode
+import com.jarvismini.core.JarvisState
+
+class MainActivity : AppCompatActivity() {
+
+    private lateinit var statusText: TextView
+    private lateinit var modeSpinner: Spinner
+    private lateinit var enableCallButton: Button
+
+    private val PERM_REQ = 2001
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        JarvisState.init(this)
+        requestPermissions()
+
+        statusText = TextView(this).apply {
+            text = "Current mode: ${JarvisState.currentMode}"
+            textSize = 16f
+        }
+
+        modeSpinner = Spinner(this)
+        val modes = JarvisMode.values().map { it.name }
+        modeSpinner.adapter =
+            ArrayAdapter(this, android.R.layout.simple_spinner_item, modes)
+
+        modeSpinner.setSelection(JarvisMode.values().indexOf(JarvisState.currentMode))
+
+        modeSpinner.onItemSelectedListener =
+            object : AdapterView.OnItemSelectedListener {
+                override fun onItemSelected(
+                    parent: AdapterView<*>,
+                    view: View?,
+                    pos: Int,
+                    id: Long
+                ) {
+                    val mode = JarvisMode.valueOf(modes[pos])
+                    JarvisState.setMode(this@MainActivity, mode)
+                    statusText.text = "Current mode: $mode"
+                }
+
+                override fun onNothingSelected(parent: AdapterView<*>) {}
+            }
+
+        enableCallButton = Button(this).apply {
+            text = "Enable Call Auto-Reply"
+            setOnClickListener { requestCallScreeningRole() }
+        }
+
+        val layout = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            addView(statusText)
+            addView(modeSpinner)
+            addView(enableCallButton)
+        }
+
+        setContentView(layout)
+    }
+
+    private fun requestCallScreeningRole() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return
+
+        val roleManager = getSystemService(RoleManager::class.java)
+
+        if (roleManager.isRoleAvailable(RoleManager.ROLE_CALL_SCREENING)
+            && !roleManager.isRoleHeld(RoleManager.ROLE_CALL_SCREENING)
+        ) {
+            startActivity(
+                roleManager.createRequestRoleIntent(
+                    RoleManager.ROLE_CALL_SCREENING
+                )
+            )
+        } else {
+            Toast.makeText(this, "Call screening already enabled", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun requestPermissions() {
+        val perms = mutableListOf<String>()
+
+        if (ContextCompat.checkSelfPermission(
+                this,
+                android.Manifest.permission.READ_CONTACTS
+            ) != PackageManager.PERMISSION_GRANTED
+        ) perms += android.Manifest.permission.READ_CONTACTS
+
+        if (ContextCompat.checkSelfPermission(
+                this,
+                android.Manifest.permission.SEND_SMS
+            ) != PackageManager.PERMISSION_GRANTED
+        ) perms += android.Manifest.permission.SEND_SMS
+
+        if (perms.isNotEmpty()) {
+            ActivityCompat.requestPermissions(this, perms.toTypedArray(), PERM_REQ)
+        }
+    }
+}
+
+
 ===== FILE: app/src/main/kotlin/com/jarvismini/BuildConfigBridge.kt =====
 package com.jarvismini
 
@@ -303,13 +424,8 @@ class CoreApp : Application() {
     override fun onCreate() {
         super.onCreate()
 
-        // ✅ PHASE-2: Restore persisted Jarvis mode
         JarvisState.init(this)
-
-        // ✅ Initialize automation AFTER state is restored
         AutoReplyOrchestrator.init()
-
-        println("CoreApp started with mode: ${JarvisState.currentMode}")
     }
 }
 
@@ -1253,7 +1369,6 @@ object CallConstants {
 
 
 ===== FILE: modules/callhandler/src/main/java/com/jarvismini/callhandler/JarvisCallScreeningService.kt =====
-// ===== FILE: modules/callhandler/src/main/java/com/jarvismini/callhandler/JarvisCallScreeningService.kt =====
 package com.jarvismini.callhandler
 
 import android.net.Uri
@@ -1267,103 +1382,61 @@ import com.jarvismini.automation.input.AutoReplyInput
 import com.jarvismini.automation.orchestrator.AutoReplyOrchestrator
 import com.jarvismini.core.JarvisMode
 import com.jarvismini.core.JarvisState
-import java.util.concurrent.ConcurrentHashMap
 
 class JarvisCallScreeningService : CallScreeningService() {
 
-    companion object {
-        private const val TAG = "CALL-HANDLER"
-        private const val COOLDOWN_MS = 60_000L
-    }
+    override fun onScreenCall(details: Call.Details) {
+        val number = details.handle?.schemeSpecificPart ?: return
 
-    private val lastHandled = ConcurrentHashMap<String, Long>()
-
-    override fun onScreenCall(callDetails: Call.Details) {
-        val handle = callDetails.handle ?: return
-        val number = handle.schemeSpecificPart ?: return
-        val now = System.currentTimeMillis()
-
-        // Helper: allow call
-        fun allowCall() {
-            respondToCall(
-                callDetails,
-                CallResponse.Builder().build()
-            )
-        }
-
-        // 🧠 NORMAL MODE → allow
+        // Jarvis OFF → do nothing
         if (JarvisState.currentMode == JarvisMode.NORMAL) {
-            allowCall()
+            allow()
             return
         }
 
-        // 🔒 CONTACT-ONLY
-        if (!isSavedContact(number)) {
-            allowCall()
+        // Contacts only
+        if (!isContact(number)) {
+            allow()
             return
         }
 
-        // 🔁 COOLDOWN
-        val last = lastHandled[number] ?: 0L
-        if (now - last < COOLDOWN_MS) {
-            allowCall()
-            return
-        }
-        lastHandled[number] = now
-
-        // 🧠 ORCHESTRATOR
         val decision = AutoReplyOrchestrator.handle(
-            AutoReplyInput(
-                messageText = "Incoming call",
-                isFromOwner = false
-            )
+            AutoReplyInput("Incoming call", false)
         )
 
-        if (decision !is ReplyDecision.AutoReply) {
-            allowCall()
-            return
+        if (decision is ReplyDecision.AutoReply) {
+            SmsManager.getDefault()
+                .sendTextMessage(number, null, decision.message, null, null)
+
+            reject()
+        } else {
+            allow()
         }
+    }
 
-        // 📩 SEND SMS
-        sendSms(number, decision.message)
+    private fun allow() {
+        respondToCall(CallResponse.Builder().build())
+    }
 
-        // 🔕 SILENCE + REJECT
+    private fun reject() {
         respondToCall(
-            callDetails,
             CallResponse.Builder()
                 .setDisallowCall(true)
                 .setRejectCall(true)
-                .setSkipCallLog(true)
                 .setSkipNotification(true)
+                .setSkipCallLog(true)
                 .build()
         )
-
-        Log.d(TAG, "Call silenced + SMS sent to $number")
     }
 
-    private fun isSavedContact(number: String): Boolean {
+    private fun isContact(number: String): Boolean {
         val uri = Uri.withAppendedPath(
             ContactsContract.PhoneLookup.CONTENT_FILTER_URI,
             Uri.encode(number)
         )
 
-        val cursor = contentResolver.query(
-            uri,
-            arrayOf(ContactsContract.PhoneLookup._ID),
-            null,
-            null,
-            null
-        )
-
-        return cursor?.use { it.moveToFirst() } == true
-    }
-
-    private fun sendSms(number: String, message: String) {
-        try {
-            SmsManager.getDefault()
-                .sendTextMessage(number, null, message, null, null)
-        } catch (e: Exception) {
-            Log.e(TAG, "SMS failed", e)
+        contentResolver.query(uri, null, null, null, null).use {
+            return it?.moveToFirst() == true
         }
     }
 }
@@ -1654,6 +1727,35 @@ android {
 ===== FILE: modules/core/src/main/AndroidManifest.xml =====
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android" />
+
+
+===== FILE: modules/core/src/main/java/com/jarvismini/core/JarvisState.kt =====
+package com.jarvismini.core
+
+import android.content.Context
+
+object JarvisState {
+
+    private const val PREFS = "jarvis_state"
+    private const val KEY_MODE = "mode"
+
+    var currentMode: JarvisMode = JarvisMode.NORMAL
+        private set
+
+    fun init(context: Context) {
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val saved = prefs.getString(KEY_MODE, JarvisMode.NORMAL.name)
+        currentMode = JarvisMode.valueOf(saved!!)
+    }
+
+    fun setMode(context: Context, mode: JarvisMode) {
+        currentMode = mode
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit()
+            .putString(KEY_MODE, mode.name)
+            .apply()
+    }
+}
 
 
 ===== FILE: modules/core/src/main/kotlin/com/jarvismini/core/AssistantProfile.kt =====
