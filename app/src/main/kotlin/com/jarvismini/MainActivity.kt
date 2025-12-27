@@ -17,7 +17,7 @@ import com.jarvismini.core.JarvisState
 class MainActivity : AppCompatActivity() {
 
     private lateinit var statusText: TextView
-    private lateinit var simulateButton: Button
+    private lateinit var actionButton: Button
     private lateinit var modeSpinner: Spinner
 
     companion object {
@@ -27,18 +27,23 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // ✅ Phase-2: restore persistent Jarvis state
+        JarvisState.init(this)
+
         requestRequiredPermissions()
 
-        // Status text
+        // ================= STATUS =================
         statusText = TextView(this).apply {
             textSize = 16f
             text = "Current mode: ${JarvisState.currentMode}"
             setPadding(24, 24, 24, 24)
         }
 
-        // Spinner
+        // ================= MODE SELECTOR =================
         modeSpinner = Spinner(this)
+
         val modes = JarvisMode.values().map { it.name }
+
         val adapter = ArrayAdapter(
             this,
             android.R.layout.simple_spinner_item,
@@ -56,34 +61,55 @@ class MainActivity : AppCompatActivity() {
                     id: Long
                 ) {
                     val selectedMode = JarvisMode.valueOf(modes[position])
-                    JarvisState.currentMode = selectedMode
+                    JarvisState.setMode(this@MainActivity, selectedMode)
                     statusText.text = "Current mode: $selectedMode"
                 }
 
                 override fun onNothingSelected(parent: AdapterView<*>) {}
             }
 
-        // Button
-        simulateButton = Button(this).apply {
-            text = "Simulate Incoming Message"
-            setOnClickListener { simulateIncomingMessage() }
+        modeSpinner.setSelection(
+            JarvisMode.values().indexOf(JarvisState.currentMode)
+        )
+
+        // ================= PHASE-2 ACTION BUTTON =================
+        actionButton = Button(this).apply {
+            text = "Run Automation Now"
+            setOnClickListener { runAutomationNow() }
         }
 
-        // Layout
+        // ================= LAYOUT =================
         val layout = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             addView(statusText)
             addView(modeSpinner)
-            addView(simulateButton)
+            addView(actionButton)
         }
 
         setContentView(layout)
     }
 
+    // ================= REAL AUTOMATION TRIGGER =================
+    private fun runAutomationNow() {
+        val input = AutoReplyInput(
+            messageText = "Manual automation trigger",
+            isFromOwner = false
+        )
+
+        val decision = AutoReplyOrchestrator.handle(input)
+
+        statusText.text = when (decision) {
+            is ReplyDecision.AutoReply ->
+                "Automation executed → ${decision.message}"
+            ReplyDecision.NoReply ->
+                "Automation blocked by mode: ${JarvisState.currentMode}"
+        }
+    }
+
+    // ================= PERMISSIONS =================
     private fun requestRequiredPermissions() {
         val permissions = mutableListOf<String>()
 
-        // Android 13+ notifications
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(
                     this,
@@ -94,7 +120,6 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // SMS + Contacts (Phase 1)
         if (ContextCompat.checkSelfPermission(
                 this,
                 android.Manifest.permission.RECEIVE_SMS
@@ -128,22 +153,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun simulateIncomingMessage() {
-        val input = AutoReplyInput(
-            messageText = "Hello Jarvis! Are you there?",
-            isFromOwner = false
-        )
-
-        val decision = AutoReplyOrchestrator.handle(input)
-
-        statusText.text = when (decision) {
-            is ReplyDecision.AutoReply ->
-                "AutoReply: ${decision.message}"
-            ReplyDecision.NoReply ->
-                "No reply decision made"
-        }
-    }
-
     override fun onRequestPermissionsResult(
         requestCode: Int,
         permissions: Array<out String>,
@@ -154,7 +163,7 @@ class MainActivity : AppCompatActivity() {
         if (requestCode == PERMISSION_REQ_CODE) {
             Toast.makeText(
                 this,
-                "Phase-1 permissions processed",
+                "Permissions processed",
                 Toast.LENGTH_SHORT
             ).show()
         }
