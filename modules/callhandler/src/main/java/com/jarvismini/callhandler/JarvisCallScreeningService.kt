@@ -1,3 +1,4 @@
+// ===== FILE: modules/callhandler/src/main/java/com/jarvismini/callhandler/JarvisCallScreeningService.kt =====
 package com.jarvismini.callhandler
 
 import android.net.Uri
@@ -17,7 +18,7 @@ class JarvisCallScreeningService : CallScreeningService() {
 
     companion object {
         private const val TAG = "CALL-HANDLER"
-        private const val COOLDOWN_MS = 60_000L
+        private const val COOLDOWN_MS = 60_000L // 1 min per number
     }
 
     private val lastHandled = ConcurrentHashMap<String, Long>()
@@ -27,31 +28,38 @@ class JarvisCallScreeningService : CallScreeningService() {
         val number = handle.schemeSpecificPart ?: return
         val now = System.currentTimeMillis()
 
-        // 🧠 ALWAYS RESPOND — even if letting it ring
+        // ✅ Always respond — required by CallScreeningService
         fun allow() {
-            respondToCall(CallResponse.Builder().build())
+            respondToCall(
+                callDetails,
+                CallResponse.Builder().build()
+            )
         }
 
-        // 🧠 JARVIS OFF → do nothing
+        // 🧠 JARVIS OFF → allow ringing
         if (JarvisState.currentMode == JarvisMode.OFF) {
+            Log.d(TAG, "Jarvis OFF → allowing call")
             allow()
             return
         }
 
-        // 🔒 CONTACT-ONLY
+        // 🔒 CONTACT-ONLY enforcement
         if (!isSavedContact(number)) {
+            Log.d(TAG, "Unknown number → allowing call: $number")
             allow()
             return
         }
 
-        // 🔁 COOLDOWN
+        // 🔁 Cooldown protection
         val last = lastHandled[number] ?: 0L
         if (now - last < COOLDOWN_MS) {
+            Log.d(TAG, "Cooldown active → allowing call: $number")
             allow()
             return
         }
         lastHandled[number] = now
 
+        // 🧠 Ask orchestrator
         val decision = AutoReplyOrchestrator.handle(
             AutoReplyInput(
                 messageText = "Incoming call",
@@ -60,13 +68,17 @@ class JarvisCallScreeningService : CallScreeningService() {
         )
 
         if (decision !is ReplyDecision.AutoReply) {
+            Log.d(TAG, "Orchestrator blocked auto-reply")
             allow()
             return
         }
 
+        // 📩 Send SMS
         sendSms(number, decision.message)
 
+        // 🔕 Silence + reject call
         respondToCall(
+            callDetails,
             CallResponse.Builder()
                 .setDisallowCall(true)
                 .setRejectCall(true)
@@ -75,8 +87,10 @@ class JarvisCallScreeningService : CallScreeningService() {
                 .build()
         )
 
-        Log.d(TAG, "Call rejected + SMS sent")
+        Log.d(TAG, "Call silenced + SMS sent → $number")
     }
+
+    // ================= HELPERS =================
 
     private fun isSavedContact(number: String): Boolean {
         val uri = Uri.withAppendedPath(
@@ -84,15 +98,15 @@ class JarvisCallScreeningService : CallScreeningService() {
             Uri.encode(number)
         )
 
-        contentResolver.query(
+        val cursor = contentResolver.query(
             uri,
             arrayOf(ContactsContract.PhoneLookup._ID),
             null,
             null,
             null
-        )?.use { return it.moveToFirst() }
+        )
 
-        return false
+        return cursor?.use { it.moveToFirst() } == true
     }
 
     private fun sendSms(number: String, message: String) {
@@ -100,7 +114,7 @@ class JarvisCallScreeningService : CallScreeningService() {
             SmsManager.getDefault()
                 .sendTextMessage(number, null, message, null, null)
         } catch (e: Exception) {
-            Log.e(TAG, "SMS failed", e)
+            Log.e(TAG, "SMS send failed", e)
         }
     }
 }
